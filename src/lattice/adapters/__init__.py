@@ -3,3 +3,4 @@
 from lattice.adapters.segmenter import block  # noqa: F401
 from lattice.adapters.extractor import token  # noqa: F401
 from lattice.adapters.embedder import hashing  # noqa: F401
+from lattice.adapters.scorer import frequency  # noqa: F401
