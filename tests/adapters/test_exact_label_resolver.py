@@ -40,3 +40,17 @@ class TestExactLabelResolver(ResolverContract):
             [make_scored_mention(surface="vector store")], make_document(id="d1")
         )
         assert len(r.concept.embedding) == 16
+
+    def test_mixed_case_and_whitespace_surfaces_dedupe_within_one_call(self):
+        # exact_label.py normalizes surfaces with `.strip().lower()`, so
+        # both case and surrounding whitespace are folded together.
+        resolver = self.make_resolver()
+        r1, r2 = resolver.resolve(
+            [
+                make_scored_mention(surface="Vector", unit_id="d1:u0"),
+                make_scored_mention(surface=" vector ", unit_id="d1:u1"),
+            ],
+            make_document(id="d1"),
+        )
+        assert r1.concept.id == r2.concept.id
+        assert r1.is_new and not r2.is_new

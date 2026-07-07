@@ -12,7 +12,10 @@ _WORD = re.compile(r"[A-Za-z][A-Za-z-]+")
 class TokenExtractor(Extractor):
     """Trivial walking-skeleton extractor: every word of at least min_length
     characters is a candidate mention. Real noun-phrase extraction arrives in
-    Milestone 2; this exists so the skeleton runs with zero NLP deps."""
+    Milestone 2; this exists so the skeleton runs with zero NLP deps.
+
+    Note: the `_WORD` regex requires at least 2 letters, so `min_length=1`
+    still never yields 1-character mentions."""
 
     def __init__(self, min_length: int = 4):
         self.min_length = min_length

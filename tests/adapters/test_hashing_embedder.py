@@ -20,3 +20,6 @@ class TestHashingEmbedder(EmbedderContract):
         [a] = embedder.embed(["vector store"])
         [b] = embedder.embed(["completely unrelated phrase"])
         assert a != b
+
+    def test_empty_text_yields_zero_vector_not_unit_norm(self):
+        assert HashingEmbedder(dim=32).embed([""]) == [(0.0,) * 32]

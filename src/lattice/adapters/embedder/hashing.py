@@ -10,7 +10,11 @@ from lattice.registry.registry import register
 class HashingEmbedder(Embedder):
     """Deterministic character-trigram hashing embedder. Not semantically
     meaningful — a stand-in so the skeleton runs without a model download.
-    A sentence-transformer adapter replaces it for real experiments (M2)."""
+    A sentence-transformer adapter replaces it for real experiments (M2).
+
+    Empty or no-trigram input (e.g. an empty string) yields the all-zero
+    vector, not a unit-norm vector — there is no direction to normalize
+    toward when no trigram hashes were accumulated."""
 
     def __init__(self, dim: int = 64):
         self._dim = dim

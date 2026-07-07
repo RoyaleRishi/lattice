@@ -29,6 +29,8 @@ def register(port: type, name: str):
 
 
 def lookup(port: type, name: str) -> type:
+    """Resolve a registered adapter class by (port, name), as used by the
+    factory when wiring config-named adapters."""
     adapters = _REGISTRY.get(port, {})
     if name not in adapters:
         known = ", ".join(sorted(adapters)) or "none registered"
@@ -39,4 +41,6 @@ def lookup(port: type, name: str) -> type:
 
 
 def available(port: type) -> dict[str, type]:
+    """Return a copy of the name -> adapter class mapping registered for a
+    port, e.g. for listing choices in config validation errors."""
     return dict(_REGISTRY.get(port, {}))

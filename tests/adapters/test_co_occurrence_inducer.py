@@ -54,3 +54,39 @@ class TestCoOccurrenceInducer(RelationInducerContract):
             resolutions, [make_unit(id="d1:u0", document_id="d1")], make_document(id="d1")
         )
         assert relations == []
+
+    def test_three_concepts_in_one_unit_produce_all_three_pairs(self):
+        resolutions = [
+            make_resolution(surface="a-concept", unit_id="d1:u0"),
+            make_resolution(surface="b-concept", unit_id="d1:u0"),
+            make_resolution(surface="c-concept", unit_id="d1:u0"),
+        ]
+        relations = CoOccurrenceInducer().induce(
+            resolutions, [make_unit(id="d1:u0", document_id="d1")], make_document(id="d1")
+        )
+        assert len(relations) == 3
+        pairs = {(relation.source_id, relation.target_id) for relation in relations}
+        assert pairs == {
+            ("c:a-concept", "c:b-concept"),
+            ("c:a-concept", "c:c-concept"),
+            ("c:b-concept", "c:c-concept"),
+        }
+
+    def test_same_pair_across_two_units_dedupes_to_one_relation(self):
+        resolutions = [
+            make_resolution(surface="a-concept", unit_id="d1:u0"),
+            make_resolution(surface="b-concept", unit_id="d1:u0"),
+            make_resolution(surface="a-concept", unit_id="d1:u1"),
+            make_resolution(surface="b-concept", unit_id="d1:u1"),
+        ]
+        relations = CoOccurrenceInducer().induce(
+            resolutions,
+            [
+                make_unit(id="d1:u0", document_id="d1"),
+                make_unit(id="d1:u1", document_id="d1", order=1),
+            ],
+            make_document(id="d1"),
+        )
+        assert len(relations) == 1
+        assert relations[0].source_id == "c:a-concept"
+        assert relations[0].target_id == "c:b-concept"
