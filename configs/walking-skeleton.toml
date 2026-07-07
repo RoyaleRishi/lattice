@@ -1,0 +1,42 @@
+# First end-to-end run: every port filled by its trivial walking-skeleton
+# adapter, evaluated on the toy fixture corpus.
+
+[segmenter]
+name = "block"
+
+[extractor]
+name = "token"
+[extractor.params]
+min_length = 4
+
+[scorer]
+name = "frequency"
+[scorer.params]
+top_k = 10
+
+[resolver]
+name = "exact-label"
+
+[relation_inducer]
+name = "co-occurrence"
+
+[graph_integrator]
+name = "in-memory"
+
+[embedder]
+name = "hashing"
+[embedder.params]
+dim = 64
+
+[concept_store]
+name = "in-memory"
+
+[run]
+on_error = "fail"
+seed = 0
+
+[dataset]
+name = "toy"
+
+[[metrics]]
+name = "label-f1"
