@@ -100,9 +100,12 @@ selected (default 10), ties lexicographic. Consumes only the injected `Embedder`
 
 ### 6.4 Dataset `"inspec"` (M2a)
 
-- Acquisition: `scripts/fetch-datasets.py` downloads the Inspec benchmark (Hulth 2003) from the
-  standard `boudinfl/ake-datasets` mirror into git-ignored `data/inspec/`, verifying a pinned
-  SHA-256 (exact URL + hash fixed in the M2a plan). Datasets are never committed.
+- Acquisition: `scripts/fetch_datasets.py` loads the Inspec benchmark (Hulth 2003) from the
+  contemporary-standard `midas/inspec` HuggingFace dataset (proper train/validation/test splits)
+  and converts it once to plain JSONL (`{"id", "text", "keyphrases"}` per line) under git-ignored
+  `data/inspec/`, recording SHA-256 checksums of the emitted files. The `datasets` library lives
+  in the `ml` group and is imported only by the fetch script — the adapter reads JSONL with the
+  stdlib. Datasets are never committed.
 - Adapter params: `root` (default `data/inspec`), `split` (default `"test"`), `limit`
   (optional int, for smoke runs). Yields one `Document` per abstract (`kind="abstract"`,
   `timestamp` = stable index order); `ground_truth()` returns the per-document gold keyphrases
