@@ -83,6 +83,7 @@ class Orchestrator:
             concepts_updated=tuple(updated.values()),
             relations_added=tuple(relations),
             errors=(),
+            selected_mentions=tuple(selected),
         )
 
     def process_stream(self, documents: Iterable[Document]) -> list[GraphDelta]:

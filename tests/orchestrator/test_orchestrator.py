@@ -110,3 +110,17 @@ def test_on_error_skip_records_error_and_continues():
         assert delta.concepts_added == ()
         assert len(delta.errors) == 1
         assert "boom" in delta.errors[0]
+
+
+def test_delta_carries_selected_mentions_in_scorer_order():
+    orchestrator = build_orchestrator(scorer=FrequencyScorer(top_k=1))
+    delta = orchestrator.process(make_document(id="d1", text="vector vector store"))
+    surfaces = [sm.mention.surface for sm in delta.selected_mentions]
+    assert surfaces == ["vector", "vector"]
+    assert all(sm.selected for sm in delta.selected_mentions)
+
+
+def test_skip_path_has_no_selected_mentions():
+    orchestrator = build_orchestrator(extractor=ExplodingExtractor(), on_error="skip")
+    delta = orchestrator.process(make_document(id="d1"))
+    assert delta.selected_mentions == ()

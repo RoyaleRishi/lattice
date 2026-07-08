@@ -73,3 +73,8 @@ def test_graph_delta_errors_default_empty():
 def test_graph_snapshot_holds_tuples():
     snap = GraphSnapshot(concepts=(), relations=())
     assert snap.concepts == () and snap.relations == ()
+
+
+def test_graph_delta_selected_mentions_default_empty():
+    delta = GraphDelta(document_id="d1", concepts_added=(), concepts_updated=(), relations_added=())
+    assert delta.selected_mentions == ()
