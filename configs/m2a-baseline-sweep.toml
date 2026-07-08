@@ -1,0 +1,43 @@
+# First sweep: the trivial frequency scorer vs the embedding-cosine baseline.
+
+[base.segmenter]
+name = "block"
+
+[base.extractor]
+name = "noun-chunk"
+
+[base.resolver]
+name = "exact-label"
+
+[base.relation_inducer]
+name = "co-occurrence"
+
+[base.graph_integrator]
+name = "in-memory"
+
+[base.embedder]
+name = "sentence-transformer"
+
+[base.concept_store]
+name = "in-memory"
+
+[base.run]
+on_error = "fail"
+seed = 0
+
+[base.dataset]
+name = "inspec"
+[base.dataset.params]
+split = "test"
+
+[base.scorer]
+name = "embedding-cosine"
+
+[[base.document_metrics]]
+name = "f1-at-k"
+
+[axes]
+scorer = [
+  { name = "frequency", params = { top_k = 15 } },
+  { name = "embedding-cosine", params = { top_k = 15 } },
+]

@@ -1,0 +1,48 @@
+# M2a baseline: real extraction + salience on the Inspec test split.
+# Prereqs: uv sync --group ml && uv run --group ml python scripts/fetch_models.py
+#          && uv run --group ml python scripts/fetch_datasets.py inspec
+
+[segmenter]
+name = "block"
+
+[extractor]
+name = "noun-chunk"
+[extractor.params]
+max_tokens = 5
+
+[scorer]
+name = "embedding-cosine"
+[scorer.params]
+top_k = 15
+
+[resolver]
+name = "exact-label"
+
+[relation_inducer]
+name = "co-occurrence"
+
+[graph_integrator]
+name = "in-memory"
+
+[embedder]
+name = "sentence-transformer"
+[embedder.params]
+model = "all-MiniLM-L6-v2"
+
+[concept_store]
+name = "in-memory"
+
+[run]
+on_error = "fail"
+seed = 0
+
+[dataset]
+name = "inspec"
+[dataset.params]
+split = "test"
+
+[[metrics]]
+name = "label-f1"
+
+[[document_metrics]]
+name = "f1-at-k"
