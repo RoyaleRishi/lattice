@@ -18,7 +18,11 @@ class SentenceTransformerEmbedder(Embedder):
 
         self._model = SentenceTransformer(model, device=device)
         self._batch_size = batch_size
-        self._dim = int(self._model.get_sentence_embedding_dimension())
+        get_dim = (
+            getattr(self._model, "get_embedding_dimension", None)
+            or self._model.get_sentence_embedding_dimension
+        )
+        self._dim = int(get_dim())
 
     @property
     def dim(self) -> int:
