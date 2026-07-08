@@ -11,12 +11,13 @@ from pydantic import Field
 from lattice.config.factory import build_orchestrator, instantiate
 from lattice.config.loader import load_config
 from lattice.config.schema import AdapterSpec, RunConfig
-from lattice.ports import Dataset, Metric
+from lattice.ports import Dataset, DocumentMetric, Metric
 
 
 class ExperimentConfig(RunConfig):
     dataset: AdapterSpec
     metrics: list[AdapterSpec] = Field(default_factory=list)
+    document_metrics: list[AdapterSpec] = Field(default_factory=list)
 
 
 @dataclass(frozen=True)
@@ -37,11 +38,19 @@ def run_experiment(config: ExperimentConfig) -> RunReport:
         spec.name: instantiate(Metric, spec).evaluate(snapshot, ground_truth)
         for spec in config.metrics
     }
+    document_results = {
+        spec.name: instantiate(DocumentMetric, spec).evaluate_documents(deltas, ground_truth)
+        for spec in config.document_metrics
+    }
+    duplicates = set(metric_results) & set(document_results)
+    if duplicates:
+        raise ValueError(f"metric name(s) used by both families: {sorted(duplicates)}")
+    all_metrics = {**metric_results, **document_results}
     return RunReport(
         config=config.model_dump(),
         documents_processed=len(deltas),
         errors=tuple(error for delta in deltas for error in delta.errors),
-        metrics=metric_results,
+        metrics=all_metrics,
     )
 
 

@@ -3,6 +3,7 @@ import pytest
 from lattice.ports import (
     ConceptStore,
     Dataset,
+    DocumentMetric,
     Embedder,
     Extractor,
     GraphIntegrator,
@@ -24,6 +25,7 @@ ALL_PORTS = [
     ConceptStore,
     Dataset,
     Metric,
+    DocumentMetric,
 ]
 
 

@@ -1,4 +1,10 @@
+import pytest
+
+from lattice.config.schema import AdapterSpec
+from lattice.core.types import GraphDelta
 from lattice.harness.runner import ExperimentConfig, run_experiment, run_from_path
+from lattice.ports import DocumentMetric
+from lattice.registry.registry import register
 
 CONFIG_PATH = "configs/walking-skeleton.toml"
 
@@ -44,3 +50,30 @@ def test_run_from_path_loads_toml_and_runs():
     report = run_from_path(CONFIG_PATH)
     assert report.documents_processed == 3
     assert report.metrics["label-f1"]["recall"] == 1.0
+
+
+@register(DocumentMetric, "count-docs")
+class _CountDocs(DocumentMetric):
+    def evaluate_documents(self, deltas, ground_truth):
+        return {"documents": float(len(list(deltas)))}
+
+
+def test_document_metrics_evaluated_from_deltas():
+    config = _experiment_config()
+    config = config.model_copy(update={"document_metrics": [AdapterSpec(name="count-docs")]})
+    report = run_experiment(config)
+    assert report.metrics["count-docs"] == {"documents": 3.0}
+
+
+@register(DocumentMetric, "label-f1")
+class _ShadowLabelF1(DocumentMetric):
+    def evaluate_documents(self, deltas, ground_truth):
+        return {"x": 0.0}
+
+
+def test_duplicate_metric_names_across_families_rejected():
+    config = _experiment_config().model_copy(
+        update={"document_metrics": [AdapterSpec(name="label-f1")]}
+    )
+    with pytest.raises(ValueError, match="label-f1"):
+        run_experiment(config)
