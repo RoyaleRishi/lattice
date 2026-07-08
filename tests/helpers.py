@@ -3,6 +3,7 @@
 from lattice.core.types import (
     Concept,
     Document,
+    GraphDelta,
     Mention,
     Resolution,
     ScoredMention,
@@ -72,4 +73,19 @@ def make_resolution(
         concept=concept or make_concept(id=f"c:{surface}", label=surface),
         mention=make_scored_mention(surface=surface, unit_id=unit_id),
         is_new=is_new,
+    )
+
+
+def make_delta(
+    document_id: str = "d1",
+    selected: list[tuple[str, float]] | None = None,
+) -> GraphDelta:
+    return GraphDelta(
+        document_id=document_id,
+        concepts_added=(),
+        concepts_updated=(),
+        relations_added=(),
+        selected_mentions=tuple(
+            make_scored_mention(surface=s, salience=sal) for s, sal in (selected or [])
+        ),
     )
