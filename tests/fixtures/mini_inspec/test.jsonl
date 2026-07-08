@@ -1,0 +1,3 @@
+{"id": "mini-1", "keyphrases": ["vector databases", "approximate nearest neighbor search"], "text": "Vector databases index high dimensional embeddings and answer similarity queries . Modern systems implement approximate nearest neighbor search to trade accuracy for speed ."}
+{"id": "mini-2", "keyphrases": ["sentence embeddings", "semantic similarity"], "text": "Sentence embeddings map text to dense vectors . They enable semantic similarity comparison between documents and queries ."}
+{"id": "mini-3", "keyphrases": ["keyphrase extraction", "unsupervised methods"], "text": "Keyphrase extraction identifies the most important phrases in a document . Unsupervised methods rank candidate phrases without labeled training data ."}
