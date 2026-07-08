@@ -1,18 +1,7 @@
-import math
-from collections.abc import Sequence
-
 from lattice.core.types import Concept
+from lattice.core.vectors import cosine
 from lattice.ports import ConceptStore
 from lattice.registry.registry import register
-
-
-def _cosine(a: Sequence[float], b: Sequence[float]) -> float:
-    dot = sum(x * y for x, y in zip(a, b))
-    norm_a = math.sqrt(sum(x * x for x in a))
-    norm_b = math.sqrt(sum(x * x for x in b))
-    if norm_a == 0.0 or norm_b == 0.0:
-        return 0.0
-    return dot / (norm_a * norm_b)
 
 
 @register(ConceptStore, "in-memory")
@@ -42,7 +31,7 @@ class InMemoryConceptStore(ConceptStore):
         self, embedding: tuple[float, ...], k: int = 1
     ) -> list[tuple[Concept, float]]:
         scored = [
-            (concept, _cosine(embedding, concept.embedding))
+            (concept, cosine(embedding, concept.embedding))
             for concept in self._by_id.values()
         ]
         scored.sort(key=lambda pair: (-pair[1], pair[0].id))

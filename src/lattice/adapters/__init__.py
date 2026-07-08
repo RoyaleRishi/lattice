@@ -9,5 +9,5 @@ from lattice.adapters.graph_integrator import in_memory as graph_in_memory  # no
 from lattice.adapters.metric import label_f1  # noqa: F401
 from lattice.adapters.relation_inducer import co_occurrence  # noqa: F401
 from lattice.adapters.resolver import exact_label  # noqa: F401
-from lattice.adapters.scorer import frequency  # noqa: F401
+from lattice.adapters.scorer import embedding_cosine, frequency  # noqa: F401
 from lattice.adapters.segmenter import block  # noqa: F401
