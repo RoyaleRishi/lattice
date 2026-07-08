@@ -3,10 +3,11 @@ name = "lattice"
 version = "0.1.0"
 description = "Concept-memory engine: documents in, an accreting normalized concept graph out"
 requires-python = ">=3.12"
-dependencies = ["pydantic>=2.7"]
+dependencies = ["pydantic>=2.7", "snowballstemmer>=2.2"]
 
 [dependency-groups]
-dev = ["pytest>=8.0"]
+dev = ["pytest>=8.0", "ruff>=0.4"]
+ml = ["sentence-transformers>=3.0", "spacy>=3.7", "datasets>=2.19"]
 
 [build-system]
 requires = ["hatchling"]
@@ -18,3 +19,11 @@ packages = ["src/lattice"]
 [tool.pytest.ini_options]
 pythonpath = ["."]
 testpaths = ["tests"]
+markers = ["ml: requires the ml dependency group and downloaded models"]
+
+[tool.ruff]
+line-length = 100
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP"]

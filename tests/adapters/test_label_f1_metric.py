@@ -6,7 +6,9 @@ from tests.helpers import make_concept
 
 def snapshot_of(*labels: str) -> GraphSnapshot:
     return GraphSnapshot(
-        concepts=tuple(make_concept(id=f"c:{l}", label=l) for l in labels),
+        concepts=tuple(
+            make_concept(id=f"c:{label_name}", label=label_name) for label_name in labels
+        ),
         relations=(),
     )
 

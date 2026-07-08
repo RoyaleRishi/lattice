@@ -44,8 +44,12 @@ def test_scored_mention_wraps_mention():
 
 
 def test_concept_equality_is_value_based():
-    a = Concept(id="c1", label="vector store", embedding=(1.0, 0.0), first_seen="d1", updated_at="d1")
-    b = Concept(id="c1", label="vector store", embedding=(1.0, 0.0), first_seen="d1", updated_at="d1")
+    a = Concept(
+        id="c1", label="vector store", embedding=(1.0, 0.0), first_seen="d1", updated_at="d1"
+    )
+    b = Concept(
+        id="c1", label="vector store", embedding=(1.0, 0.0), first_seen="d1", updated_at="d1"
+    )
     assert a == b
 
 
