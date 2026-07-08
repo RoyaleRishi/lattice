@@ -1,7 +1,6 @@
 import pytest
 
 from lattice.config.schema import AdapterSpec
-from lattice.core.types import GraphDelta
 from lattice.harness.runner import ExperimentConfig, run_experiment, run_from_path
 from lattice.ports import DocumentMetric
 from lattice.registry.registry import register
