@@ -21,6 +21,18 @@ class CountingEmbedder(Embedder):
         return self.inner.embed(texts)
 
 
+class ConstantEmbedder(Embedder):
+    """Test double: returns the same fixed nonzero vector for every text,
+    forcing an exact cosine-salience tie across all surfaces."""
+
+    @property
+    def dim(self) -> int:
+        return 4
+
+    def embed(self, texts):
+        return [(1.0, 1.0, 1.0, 1.0) for _ in texts]
+
+
 class TestEmbeddingCosineScorer(ScorerContract):
     def make_scorer(self) -> EmbeddingCosineScorer:
         return EmbeddingCosineScorer(embedder=HashingEmbedder(dim=16))
@@ -55,3 +67,16 @@ class TestEmbeddingCosineScorer(ScorerContract):
         ]
         scored = scorer.score(mentions, [unit])
         assert sum(1 for sm in scored if sm.selected) == 1
+
+    def test_top_k_breaks_genuine_salience_tie_lexicographically(self):
+        scorer = EmbeddingCosineScorer(embedder=ConstantEmbedder(), top_k=1)
+        unit = make_unit(text="alpha beta")
+        mentions = [
+            make_mention(surface="beta", unit_id=unit.id, span=(6, 10)),
+            make_mention(surface="alpha", unit_id=unit.id, span=(0, 5)),
+        ]
+        scored = scorer.score(mentions, [unit])
+        saliences = {sm.mention.surface: sm.salience for sm in scored}
+        assert saliences["alpha"] == saliences["beta"]  # genuine tie, not a fluke
+        selected = {sm.mention.surface for sm in scored if sm.selected}
+        assert selected == {"alpha"}
