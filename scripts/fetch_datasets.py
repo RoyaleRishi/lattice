@@ -30,7 +30,7 @@ def fetch_inspec(root: Path) -> None:
     out_dir.mkdir(parents=True, exist_ok=True)
     checksums: list[str] = []
     for split in SPLITS:
-        dataset = load_dataset("midas/inspec", "extraction", split=split)
+        dataset = load_dataset("midas/inspec", "generation", split=split)
         out_path = out_dir / f"{split}.jsonl"
         with out_path.open("w") as f:
             for i, record in enumerate(dataset):
