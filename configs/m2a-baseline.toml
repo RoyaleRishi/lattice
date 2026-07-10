@@ -10,6 +10,7 @@ name = "noun-chunk"
 [extractor.params]
 max_tokens = 5
 
+# Invariant: scorer top_k must be >= max ks of f1-at-k (selected mentions cap the ranking depth).
 [scorer]
 name = "embedding-cosine"
 [scorer.params]
@@ -40,9 +41,6 @@ seed = 0
 name = "inspec"
 [dataset.params]
 split = "test"
-
-[[metrics]]
-name = "label-f1"
 
 [[document_metrics]]
 name = "f1-at-k"

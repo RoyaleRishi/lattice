@@ -36,6 +36,7 @@ name = "embedding-cosine"
 [[base.document_metrics]]
 name = "f1-at-k"
 
+# Invariant: scorer top_k must be >= max ks of f1-at-k (selected mentions cap the ranking depth).
 [axes]
 scorer = [
   { name = "frequency", params = { top_k = 15 } },

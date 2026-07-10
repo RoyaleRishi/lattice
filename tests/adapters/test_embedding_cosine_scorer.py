@@ -80,3 +80,10 @@ class TestEmbeddingCosineScorer(ScorerContract):
         assert saliences["alpha"] == saliences["beta"]  # genuine tie, not a fluke
         selected = {sm.mention.surface for sm in scored if sm.selected}
         assert selected == {"alpha"}
+
+    def test_empty_units_yields_defined_scores(self):
+        scorer = self.make_scorer()
+        mentions = [make_mention(surface="alpha", span=(0, 5))]
+        scored = scorer.score(mentions, [])
+        assert len(scored) == 1
+        assert scored[0].salience == 0.0  # empty document embeds to the zero vector

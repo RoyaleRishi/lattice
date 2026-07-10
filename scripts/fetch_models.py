@@ -10,7 +10,10 @@ def main() -> None:
     from sentence_transformers import SentenceTransformer
 
     model = SentenceTransformer("all-MiniLM-L6-v2")
-    print(f"sentence-transformer ready: dim={model.get_sentence_embedding_dimension()}")
+    get_dim = (
+        getattr(model, "get_embedding_dimension", None) or model.get_sentence_embedding_dimension
+    )
+    print(f"sentence-transformer ready: dim={get_dim()}")
 
 
 if __name__ == "__main__":

@@ -68,3 +68,12 @@ def test_write_reports(tmp_path):
     data = json.loads(json_path.read_text())
     assert len(data["runs"]) == 1
     assert md_path.read_text().startswith("|")
+
+
+def test_markdown_table_unions_columns_across_rows():
+    from lattice.harness.sweep import _markdown_table
+
+    table = [{"a": 1.0}, {"a": 2.0, "b": "x"}]
+    rendered = _markdown_table(table)
+    header = rendered.splitlines()[0]
+    assert "a" in header and "b" in header

@@ -12,7 +12,11 @@ class F1AtK(DocumentMetric):
     """Literature-standard keyphrase evaluation (M2 spec §6.5): per document,
     the top-k selected surfaces (salience desc, ties lexicographic) are
     compared to gold keyphrases as Snowball-stemmed exact phrase matches;
-    precision/recall/F1 are macro-averaged over documents."""
+    precision/recall/F1 are macro-averaged over documents.
+
+    Requires the scorer's top_k >= max(ks): rankings are computed over the
+    scorer-selected mentions, so metrics at k beyond the scorer's selection
+    depth saturate at the selection-depth value."""
 
     def __init__(self, ks: list[int] | None = None):
         self.ks = list(ks) if ks is not None else [5, 10, 15]

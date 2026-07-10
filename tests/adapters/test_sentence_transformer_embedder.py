@@ -11,14 +11,6 @@ from lattice.adapters.embedder.sentence_transformer import (  # noqa: E402
 from tests.contracts.embedder_contract import EmbedderContract  # noqa: E402
 
 
-@pytest.fixture(scope="module")
-def embedder() -> SentenceTransformerEmbedder:
-    try:
-        return SentenceTransformerEmbedder()
-    except OSError:
-        pytest.skip("all-MiniLM-L6-v2 not cached (run scripts/fetch_models.py)")
-
-
 class TestSentenceTransformerEmbedder(EmbedderContract):
     _instance = None
 

@@ -65,7 +65,11 @@ def run_sweep(sweep: SweepConfig) -> SweepReport:
 def _markdown_table(table: list[dict[str, object]]) -> str:
     if not table:
         return "(empty sweep)\n"
-    columns = list(table[0])
+    columns: list[str] = []
+    for row in table:
+        for key in row:
+            if key not in columns:
+                columns.append(key)
     lines = [
         "| " + " | ".join(columns) + " |",
         "| " + " | ".join("---" for _ in columns) + " |",
@@ -74,7 +78,8 @@ def _markdown_table(table: list[dict[str, object]]) -> str:
         lines.append(
             "| "
             + " | ".join(
-                f"{v:.4f}" if isinstance(v, float) else str(v) for v in (row[c] for c in columns)
+                f"{v:.4f}" if isinstance(v, float) else str(v)
+                for v in (row.get(c, "") for c in columns)
             )
             + " |"
         )
