@@ -90,7 +90,9 @@ class GraphDelta:
     """What one document changed in the graph. Errors are always recorded
     here, never silently dropped (spec §8). `selected_mentions` is the
     scorer's selected output for this document (pre-resolver), the unit of
-    per-document evaluation (M2 spec §4)."""
+    per-document evaluation (M2 spec §4). `resolutions` is the resolver's
+    mention→concept assignment for this document, the unit of normalization
+    evaluation (M3 spec §3)."""
 
     document_id: str
     concepts_added: tuple[Concept, ...]
@@ -98,6 +100,7 @@ class GraphDelta:
     relations_added: tuple[Relation, ...]
     errors: tuple[str, ...] = ()
     selected_mentions: tuple[ScoredMention, ...] = ()
+    resolutions: tuple[Resolution, ...] = ()
 
 
 @dataclass(frozen=True, slots=True)
