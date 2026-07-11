@@ -204,8 +204,14 @@ paper's weighting hyperparameters with paper-default values.
   reproducible table; cosine baseline F1@10 on Inspec test split lands in the published
   embedding-baseline sanity band (~0.25–0.35); default test suite green with and without the
   `ml` group installed.
-- **M2b:** MDERank ≥ cosine baseline on Inspec F1@k (as the paper reports); one sweep table
-  compares all three scorers; HCUKE implementation documents its equations against the paper.
+- **M2b:** MDERank lands in its published Inspec band (paper Table 3: MDERank(BERT)
+  F1@5/10/15 = 26.17/33.81/36.17; sanity band F1@10 ≈ 0.28–0.38 under the MiniLM embedder);
+  one sweep table compares all scorers; HCUKE implementation documents its equations against
+  the paper. *(Amended 2026-07-10: the original criterion "MDERank ≥ cosine baseline on
+  Inspec, as the paper reports" misread the paper — Table 3/§5.3 report MDERank(BERT)
+  underperforming EmbedRank(BERT) on Inspec specifically, because Inspec gold favors long
+  phrases; MDERank's wins are on long-document datasets. Beating the cosine baseline on
+  Inspec is therefore not required.)*
 
 ## 12. Explicitly deferred
 
