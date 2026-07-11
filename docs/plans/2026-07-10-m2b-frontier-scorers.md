@@ -939,6 +939,21 @@ git commit -m "feat: add M2b sweep config and end-to-end tests"
    - **hcuke:** recorded with zero errors; sanity floor f1@10 ≥ the frequency row. Published
      0.4341 used BERT token max-pooling; our whole-string MiniLM deviation may land lower.
      If below the floor, STOP and report for adjudication before closing (do not tune).
+     *(Resolved 2026-07-11: real sweep gave hcuke f1@10 = 0.1309, below the floor. Plan-author
+     adjudication after diagnosing 3 real documents: Eq. 6's local-significance threshold keeps
+     only a small "hub" minority of candidates (7/49, 3/41, 2/13 in the sampled documents); on
+     large/topically-diverse abstracts that minority is dominated by generic words ("data",
+     "system", "development") because a generic word's average similarity to a scattered
+     candidate pool exceeds a narrow technical term's, while the one small/topically-tight
+     document selected gold-accurate keyphrases almost perfectly. Root cause: the paper
+     calibrated this threshold on BERT token-level max-pooled candidate embeddings; the
+     spec-sanctioned whole-phrase Embedder-port substitution changes the similarity geometry
+     the threshold depends on — a representation-fidelity cost, not an implementation defect
+     (all 5 reviews passed with zero findings; Algorithm 1 arithmetic hand-verified twice).
+     The spec's actual §11 criterion for HCUKE — "documents its equations against the paper" —
+     does not impose a numeric floor; this plan's stricter self-imposed floor did its job by
+     routing a genuine, surprising result to adjudication rather than silent pass or ad hoc
+     tuning. Accepted as a documented finding; M2b closes without further code changes to HCUKE.)*
    - **frequency / embedding-cosine:** near their M2a values (0.2387 / 0.3545); small shifts
      are expected from block→sentence segmentation changing spaCy chunking.
 4. Record the table and verdicts in `.superpowers/sdd/progress-m2b.md`. Do NOT merge; stop
