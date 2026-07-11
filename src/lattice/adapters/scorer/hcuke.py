@@ -30,10 +30,14 @@ class HCUKEScorer(Scorer):
       containing c of W(s) * cos(H_s, H_d) * cos(H_c, H_s). Note: Eq. (5)'s
       prose would apply W(s) twice (it already sits inside Eq. (4)); Algorithm
       1 and the §3.3 worked example apply it once — we follow Algorithm 1.
-    - Local significance (Eq. 6): R_l(c_i) = sum over j != i of
-      (cos(H_ci, H_cj) - lambda * mu), mu = mean pairwise candidate
-      similarity. Self-pairs are excluded (the paper is ambiguous; a
-      self-pair adds the same constant to every candidate).
+    - Local significance (Eq. 6): R_l(c_i) = sum over ALL j (including j=i) of
+      (cos(H_ci, H_cj) - lambda * mu), mu = mean pairwise candidate similarity
+      over unique off-diagonal pairs. Algorithm 1 line 15's inner loop has no
+      guard excluding j=i, so the self-comparison (cos(H_ci,H_ci)=1) is
+      included by design -- a constant per candidate that, because the final
+      score is a product (Eq. 7), contributes a term proportional to that
+      candidate's own global significance and position weight rather than
+      cancelling out.
     - Final score (Eq. 7): R(c) = R_g(c) * R_l(c) * W(c); top_k unique
       surfaces by (-score, surface).
 
@@ -92,9 +96,9 @@ class HCUKEScorer(Scorer):
         mu = sum(pair_sim.values()) / len(pair_sim) if pair_sim else 0.0
         local_sig = {
             s: sum(
-                pair_sim[(min(s, other), max(s, other))] - self.denoise_lambda * mu
+                (1.0 if other == s else pair_sim[(min(s, other), max(s, other))])
+                - self.denoise_lambda * mu
                 for other in surfaces
-                if other != s
             )
             for s in surfaces
         }

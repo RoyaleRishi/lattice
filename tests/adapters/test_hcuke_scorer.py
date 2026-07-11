@@ -46,12 +46,19 @@ class TestHCUKEScorer(ScorerContract):
         #                  beta  = W(s0)*1*1 = 0.622459;  gamma = W(s1)*0*1 = 0.
         # First word positions: alpha 1, beta 2, gamma 3 ->
         #   W(c) = softmax(1, 1/2, 1/3) = (0.471709, 0.286106, 0.242184).
-        # Local (Eq. 6): pair sims (a,b)=1, (a,g)=0, (b,g)=0 -> mu = 1/3;
-        #   lambda=1.3 -> R_l(alpha) = R_l(beta) = (1 - 13/30) + (0 - 13/30)
-        #   = 0.133333; R_l(gamma) = -0.866667.
-        # Final (Eq. 7): alpha = 0.622459 * 0.133333 * 0.471709 = 0.039149
-        #                beta  = 0.622459 * 0.133333 * 0.286106 = 0.023745
-        #                gamma = 0 * -0.866667 * 0.242184       = -0.0
+        # Local (Eq. 6): pair sims (a,b)=1, (a,g)=0, (b,g)=0 -> mu = mean of the
+        #   3 unique off-diagonal pairs = 1/3. Algorithm 1 line 15's inner loop
+        #   sums over ALL candidates including the self-pair (cos(H_c,H_c)=1),
+        #   so each R_l gets one extra (1 - lambda*mu) term versus a j != i sum:
+        #   R_l(alpha) = (self: 1 - 13/30) + (vs beta: 1 - 13/30) + (vs gamma: 0 - 13/30)
+        #              = 0.7
+        #   R_l(beta)  = (vs alpha: 1 - 13/30) + (self: 1 - 13/30) + (vs gamma: 0 - 13/30)
+        #              = 0.7
+        #   R_l(gamma) = (vs alpha: 0 - 13/30) + (vs beta: 0 - 13/30) + (self: 1 - 13/30)
+        #              = -0.3
+        # Final (Eq. 7): alpha = 0.622459 * 0.7 * 0.471709 = 0.205534
+        #                beta  = 0.622459 * 0.7 * 0.286106 = 0.124663
+        #                gamma = 0 * -0.3 * 0.242184       = -0.0
         units, mentions = _two_sentence_fixture()
         x, y = (1.0, 0.0, 0.0), (0.0, 1.0, 0.0)
         embedder = LookupEmbedder(
@@ -60,8 +67,8 @@ class TestHCUKEScorer(ScorerContract):
         )
         scorer = HCUKEScorer(embedder=embedder, denoise_lambda=1.3)
         salience = {sm.mention.surface: sm.salience for sm in scorer.score(mentions, units)}
-        assert salience["alpha"] == pytest.approx(0.039149, abs=1e-5)
-        assert salience["beta"] == pytest.approx(0.023745, abs=1e-5)
+        assert salience["alpha"] == pytest.approx(0.205534, abs=1e-5)
+        assert salience["beta"] == pytest.approx(0.124663, abs=1e-5)
         assert salience["gamma"] == pytest.approx(0.0, abs=1e-12)
         assert salience["alpha"] > salience["beta"] > salience["gamma"]
 
