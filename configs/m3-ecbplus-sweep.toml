@@ -1,0 +1,53 @@
+# M3 normalization sweep (spec §6): exact-label vs embedding-nn thresholds on
+# ECB+ gold mentions. The gold-mentions extractor + block segmenter pairing is
+# load-bearing: converters emit single-newline text -> one unit per document.
+
+[base.segmenter]
+name = "block"
+
+[base.extractor]
+name = "gold-mentions"
+[base.extractor.params]
+root = "data/ecbplus"
+split = "test"
+
+[base.scorer]
+name = "passthrough"
+
+[base.resolver]
+name = "exact-label"
+
+[base.relation_inducer]
+name = "co-occurrence"
+
+[base.graph_integrator]
+name = "in-memory"
+
+[base.embedder]
+name = "sentence-transformer"
+
+[base.concept_store]
+name = "in-memory"
+
+[base.run]
+on_error = "fail"
+seed = 0
+
+[base.dataset]
+name = "mention-clusters"
+[base.dataset.params]
+root = "data/ecbplus"
+split = "test"
+
+[[base.document_metrics]]
+name = "clustering"
+
+[axes]
+resolver = [
+  { name = "exact-label" },
+  { name = "embedding-nn", params = { threshold = 0.65 } },
+  { name = "embedding-nn", params = { threshold = 0.75 } },
+  { name = "embedding-nn", params = { threshold = 0.80 } },
+  { name = "embedding-nn", params = { threshold = 0.85 } },
+  { name = "embedding-nn", params = { threshold = 0.90 } },
+]
