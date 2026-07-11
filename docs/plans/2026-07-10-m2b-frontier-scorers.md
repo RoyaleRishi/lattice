@@ -939,17 +939,27 @@ git commit -m "feat: add M2b sweep config and end-to-end tests"
    - **hcuke:** recorded with zero errors; sanity floor f1@10 ≥ the frequency row. Published
      0.4341 used BERT token max-pooling; our whole-string MiniLM deviation may land lower.
      If below the floor, STOP and report for adjudication before closing (do not tune).
-     *(Resolved 2026-07-11: real sweep gave hcuke f1@10 = 0.1309, below the floor. Plan-author
-     adjudication after diagnosing 3 real documents: Eq. 6's local-significance threshold keeps
-     only a small "hub" minority of candidates (7/49, 3/41, 2/13 in the sampled documents); on
-     large/topically-diverse abstracts that minority is dominated by generic words ("data",
-     "system", "development") because a generic word's average similarity to a scattered
-     candidate pool exceeds a narrow technical term's, while the one small/topically-tight
-     document selected gold-accurate keyphrases almost perfectly. Root cause: the paper
-     calibrated this threshold on BERT token-level max-pooled candidate embeddings; the
-     spec-sanctioned whole-phrase Embedder-port substitution changes the similarity geometry
-     the threshold depends on — a representation-fidelity cost, not an implementation defect
-     (all 5 reviews passed with zero findings; Algorithm 1 arithmetic hand-verified twice).
+     *(Resolved 2026-07-11, SUPERSEDED same day: real sweep initially gave hcuke f1@10 = 0.1309,
+     below the floor. Plan-author's first-pass adjudication after diagnosing 3 real documents
+     concluded this was purely a representation-fidelity cost (whole-phrase MiniLM vs. the
+     paper's BERT token-max-pooling) and accepted it without a code change. The final
+     whole-branch (opus) review caught what that first pass missed: `local_sig` excluded the
+     self-pair term from Eq. 6's sum, but Algorithm 1 line 15's inner loop
+     (`while ci in C do ... R_l ← R_l + (cosine(Hc,Hci) − λμ)`) has no guard excluding `ci = c`,
+     so the self-comparison (cos=1) is included by design — and because the final score is a
+     *product* `R_g·R_l·W` (Eq. 7), a constant added to R_l is NOT harmless: it contributes a
+     term proportional to that candidate's own R_g·W, not a uniform shift, so it changes the
+     ranking. The "Algorithm 1 arithmetic hand-verified twice" claim in the superseded text
+     above was true of the excluded-self-term formula, not of Algorithm 1 itself — an honest
+     mistake in the first adjudication, not a review failure once caught. Fixed in commit
+     `99934bb` (self-term restored, docstring corrected, hand-computed test recomputed and
+     independently re-derived by two separate reviewers); re-swept: **hcuke f1@10 = 0.1734**
+     (up from 0.1309, a ~32% relative gain, confirming the fix's real effect). Still below the
+     frequency floor (0.2398) and the published 0.4341 (BERT token-max-pooled) — *that* residual
+     gap is the genuine representation-fidelity finding: the paper's local-significance formula
+     depends on a similarity-space geometry (contextual token-level embeddings) that a
+     whole-phrase general-purpose sentence embedder does not reproduce, and it now rests on a
+     paper-faithful implementation rather than one with an undiagnosed formula deviation.
      The spec's actual §11 criterion for HCUKE — "documents its equations against the paper" —
      does not impose a numeric floor; this plan's stricter self-imposed floor did its job by
      routing a genuine, surprising result to adjudication rather than silent pass or ad hoc
