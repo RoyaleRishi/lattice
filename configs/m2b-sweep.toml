@@ -1,0 +1,49 @@
+# M2b sweep (spec §11): all scorers under identical conditions — sentence
+# units, noun-chunk candidates, MiniLM embeddings — on the Inspec test split.
+# The sentence segmenter is the base so every scorer sees the same candidate
+# set (fair comparison) and HCUKE gets its sentence level.
+
+[base.segmenter]
+name = "sentence"
+
+[base.extractor]
+name = "noun-chunk"
+
+[base.resolver]
+name = "exact-label"
+
+[base.relation_inducer]
+name = "co-occurrence"
+
+[base.graph_integrator]
+name = "in-memory"
+
+[base.embedder]
+name = "sentence-transformer"
+
+[base.concept_store]
+name = "in-memory"
+
+[base.run]
+on_error = "fail"
+seed = 0
+
+[base.dataset]
+name = "inspec"
+[base.dataset.params]
+split = "test"
+
+[base.scorer]
+name = "embedding-cosine"
+
+[[base.document_metrics]]
+name = "f1-at-k"
+
+# Invariant: scorer top_k must be >= max ks of f1-at-k (selected mentions cap the ranking depth).
+[axes]
+scorer = [
+  { name = "frequency", params = { top_k = 15 } },
+  { name = "embedding-cosine", params = { top_k = 15 } },
+  { name = "mderank", params = { top_k = 15 } },
+  { name = "hcuke", params = { top_k = 15 } },
+]
