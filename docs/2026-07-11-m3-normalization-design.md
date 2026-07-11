@@ -98,7 +98,8 @@ drop mentions at the scoring stage. Trivial, deterministic, contract-tested.
 - `ground_truth()`:
   `{"clusters_by_mention": {f"{doc_id}:{start}-{end}": cluster_id, ...}}` over the split.
 - Missing/corrupt data → explicit error naming the fetch script; SHA-256 checksums recorded
-  at conversion, verified on load (matches Inspec adapter behaviour).
+  at conversion in a `CHECKSUMS` file (*corrected 2026-07-11: matches the as-built Inspec
+  behaviour, which records at fetch time and does not re-verify on load*).
 - Committed 3-document mini-fixtures for each corpus under `tests/fixtures/`.
 
 ### 4.5 DocumentMetric `"clustering"`
@@ -123,19 +124,34 @@ Cross-document clustering quality over gold mentions:
 `data/ecbplus/` and `data/conel2/`, record SHA-256 checksums. Datasets never committed.
 Stdlib-only conversion (xml.etree for CROMER; json for ConEL-2).
 
-- **ECB+** (Cybulska & Vossen 2014): CROMER XML from `cltl/ecbPlus`. **Entity chains only**
-  (HUMAN/NON_HUMAN participants, LOC, TIME markable types; ACTION/event chains deferred).
-  Apply the standard validated-sentences filter
-  (`ECBplus_coreference_sentences.csv`). Splits by topic: train 1–35, test 36–45
-  (literature standard). Cross-document chains keyed by the corpus `instance_id`.
+- **ECB+** (Cybulska & Vossen 2014): CROMER XML from `cltl/ecbPlus`. **Entity chains only**:
+  a markable is an entity mention iff its tag starts with `HUMAN_PART`, `NON_HUMAN_PART`,
+  `LOC`, or `TIME` and it has `token_anchor` children (anchorless markables are instance
+  descriptors; `ACTION_*`/`NEG_ACTION_*`/`UNKNOWN_INSTANCE_TAG` excluded). Apply the standard
+  validated-sentences filter (`ECBplus_coreference_sentences.csv`; covers both `ecb` and
+  `ecbplus` files, 976 of 982 docs). Splits by topic: train 1–35, test 36–45. Cluster ids:
+  `CROSS_DOC_COREF` → its `note` attribute (the instance id; always present — verified);
+  `INTRA_DOC_COREF` → synthesized `{doc}:r{r_id}` (these relations carry no instance id —
+  verified); unchained mentions → singleton `{doc}:m{m_id}`. Mentions with non-contiguous
+  token anchors are skipped (3 corpus-wide — verified); exact-duplicate spans are deduped
+  keeping the lowest m_id (mention keys must be unique). Text is reconstructed as tokens
+  joined with single spaces, validated sentences joined with `"\n"` — `surface ==
+  text[start:end]` holds by construction. *(Pinned 2026-07-11 against the downloaded corpus:
+  8,274 entity mentions in validated sentences; 6,885 in cross-doc chains, 159 intra-doc,
+  none in both.)*
 - **ConEL-2** (Joko & Hasibi 2022): JSON annotations over Wizard-of-Wikipedia
-  conversations from `informagi/conversational-entity-linking-2022`. One conversation =
-  one document (`kind="transcript"`, turns joined with single newlines, speaker prefixes
-  preserved as in the raw data). Mentions: concept + named-entity annotations;
-  `cluster` = gold Wikipedia entity id (mentions sharing an entity are one cluster,
-  cross-conversation). Personal-entity annotations excluded (they denote speaker-relative
-  references, not shared concepts) — documented in the script. ConEL-2 is an evaluation
-  collection: it converts as a single `"test"` split (no train split emitted).
+  conversations from `informagi/conversational-entity-linking-2022`
+  (`ConEL22_EL_{Train,Val,Test}.json` — 174/58/58 conversations; *corrected 2026-07-11:
+  the collection does ship three splits*, converted to train/validation/test.jsonl). One
+  conversation = one document (`kind="transcript"`; utterances joined verbatim with single
+  newlines — no speaker prefixes, so raw utterance-relative spans remap by cumulative
+  offset only; *corrected from "speaker prefixes preserved"*). Mentions: `el_annotations`
+  (concept + named-entity); `cluster` = the gold Wikipedia `entity` id. Personal-entity
+  annotations excluded. Span integrity verified against the download: 2,403 mentions, one
+  mismatch corpus-wide (a span including a trailing period); the converter's correction
+  rule — if `utterance[start:start+len(mention)] == mention`, trim the end — fixes it, and
+  anything else raises. Utterances contain no newlines (verified), so the single-unit
+  invariant holds.
 - **Plan-time obligation (M2 lesson):** the plan author downloads and inspects both raw
   formats while writing the plan; converter code in the plan is written against real
   files, not memory. Any surprise (schema drift, missing fields) is resolved in the plan,
@@ -173,9 +189,13 @@ resolver = [
 
 ## 8. Testing strategy
 
-- Contract suites: `embedding-nn` passes the Resolver contract; `gold-mentions` the
-  Extractor contract; `passthrough` the Scorer contract; `mention-clusters` the Dataset
-  contract; `clustering` the DocumentMetric contract.
+- Contract suites: `embedding-nn` passes the Resolver contract; `passthrough` the Scorer
+  contract; `mention-clusters` the Dataset contract; `clustering` the DocumentMetric
+  contract. `gold-mentions` gets its **own focused suite** instead of the generic
+  Extractor contract (*corrected 2026-07-11: the generic contract feeds arbitrary
+  hard-coded units, which contradicts the sidecar protocol's precondition that units come
+  from documents present in the converted corpus*): same span/unit assertions on a fixture
+  it can serve, plus the unknown-document and text-mismatch error cases.
 - Pure-unit: B³ and ARI on hand-computed fixtures (including single-cluster and
   all-singletons edge cases); threshold merge/create boundary (≥ vs <); exact-label
   short-circuit; converter span integrity (surface == text[start:end]) on mini-fixtures.
