@@ -4,7 +4,7 @@ from lattice.adapters.concept_store import in_memory  # noqa: F401
 from lattice.adapters.dataset import inspec, mention_clusters, toy  # noqa: F401
 from lattice.adapters.document_metric import clustering, f1_at_k  # noqa: F401
 from lattice.adapters.embedder import hashing, sentence_transformer  # noqa: F401
-from lattice.adapters.extractor import noun_chunk, token  # noqa: F401
+from lattice.adapters.extractor import gold_mentions, noun_chunk, token  # noqa: F401
 from lattice.adapters.graph_integrator import in_memory as graph_in_memory  # noqa: F401
 from lattice.adapters.metric import label_f1  # noqa: F401
 from lattice.adapters.relation_inducer import co_occurrence  # noqa: F401
