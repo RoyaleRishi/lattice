@@ -928,7 +928,10 @@ git commit -m "feat: add M2b sweep config and end-to-end tests"
    `chflags nohidden .venv/lib/python*/site-packages/*.pth 2>/dev/null; uv run --no-sync pytest -q && uv run --no-sync ruff check`
 2. The real sweep (dataset already fetched in M2a; ~5–10 min on CPU — MDERank embeds one
    masked document per candidate):
-   `chflags nohidden .venv/lib/python*/site-packages/*.pth 2>/dev/null; uv run --no-sync python -m lattice.harness.sweep configs/m2b-sweep.toml`
+   `chflags nohidden .venv/lib/python*/site-packages/*.pth 2>/dev/null; uv run --no-sync python -m lattice.harness --sweep configs/m2b-sweep.toml reports/m2b`
+   *(Corrected 2026-07-11: the as-built CLI is `python -m lattice.harness --sweep` per
+   `src/lattice/harness/__main__.py`; `python -m lattice.harness.sweep` is a silent no-op —
+   PLAN-DEFECT caught by the orchestrator at the exit gate.)*
 3. Verify in `reports/`: four rows, zero errors in every row.
    - **mderank:** f1@10 in the amended spec band **[0.28, 0.38]** (paper: 0.3381 with BERT).
      Note it may land *below* embedding-cosine — that is what the paper reports on Inspec

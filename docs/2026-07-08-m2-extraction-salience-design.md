@@ -158,7 +158,9 @@ paper's weighting hyperparameters with paper-default values.
   stateful ports' `reset()` remains for intra-config use only).
 - **Output:** `SweepReport` = list of `RunReport`s + a comparison table (rows = configs, columns
   = metric keys), emitted as JSON (machine) and a markdown table (human) to `reports/`
-  (git-ignored) with the sweep spec stamped. `python -m lattice.harness.sweep <sweep.toml>`.
+  (git-ignored) with the sweep spec stamped. CLI as built (M2a):
+  `python -m lattice.harness --sweep <sweep.toml> [out_dir]` *(corrected 2026-07-11; the
+  originally specced `python -m lattice.harness.sweep` form is a silent no-op)*.
 
 ## 8. Packaging, hygiene, environment
 
@@ -200,7 +202,7 @@ paper's weighting hyperparameters with paper-default values.
 
 ## 11. Success criteria
 
-- **M2a:** `python -m lattice.harness.sweep configs/m2a-baseline-sweep.toml` produces a
+- **M2a:** `python -m lattice.harness --sweep configs/m2a-baseline-sweep.toml` produces a
   reproducible table; cosine baseline F1@10 on Inspec test split lands in the published
   embedding-baseline sanity band (~0.25–0.35); default test suite green with and without the
   `ml` group installed.
