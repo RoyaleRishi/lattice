@@ -1,0 +1,51 @@
+# M4 hierarchy sweep (spec §6): compound vs hearst vs union IS_A induction
+# on TExEval-2 env-eurovoc. Glossary-first taxonomy dataset + gazetteer extractor;
+# hashing embedder because embeddings are irrelevant to this protocol.
+
+[base.segmenter]
+name = "block"
+
+[base.extractor]
+name = "gazetteer"
+[base.extractor.params]
+root = "data/texeval"
+gold = "env-eurovoc"
+
+[base.scorer]
+name = "passthrough"
+
+[base.resolver]
+name = "exact-label"
+
+[base.relation_inducer]
+name = "compound"
+
+[base.graph_integrator]
+name = "in-memory"
+
+[base.embedder]
+name = "hashing"
+
+[base.concept_store]
+name = "in-memory"
+
+[base.run]
+on_error = "fail"
+seed = 0
+
+[base.dataset]
+name = "taxonomy"
+[base.dataset.params]
+root = "data/texeval"
+gold = "env-eurovoc"
+
+[[base.metrics]]
+name = "edge-f1"
+
+[axes]
+relation_inducer = [
+  { name = "compound" },
+  { name = "hearst" },
+  { name = "union", params = { members = [
+      { name = "hearst" }, { name = "compound" } ] } },
+]
