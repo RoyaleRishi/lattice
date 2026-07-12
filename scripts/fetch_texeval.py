@@ -124,13 +124,23 @@ def _fetch_summary(term: str, cache_dir: Path) -> dict:
         return json.loads(cache.read_text())
     url = WIKI_URL + urllib.parse.quote(term.replace(" ", "_"), safe="")
     request = urllib.request.Request(url, headers={"User-Agent": USER_AGENT})
-    try:
-        with urllib.request.urlopen(request) as response:
-            payload = json.loads(response.read().decode("utf-8"))
-    except urllib.error.HTTPError as error:
-        if error.code != 404:
+    for attempt in range(6):
+        try:
+            with urllib.request.urlopen(request) as response:
+                payload = json.loads(response.read().decode("utf-8"))
+            break
+        except urllib.error.HTTPError as error:
+            if error.code == 404:
+                payload = {"type": "not-found"}
+                break
+            if error.code == 429 and attempt < 5:
+                # Execution amendment (2026-07-12): Wikipedia burst-limits
+                # ~10 requests per window; honor Retry-After (fall back to
+                # exponential backoff) instead of aborting a resumable run.
+                retry_after = error.headers.get("Retry-After")
+                time.sleep(float(retry_after) if retry_after else 2.0**attempt)
+                continue
             raise
-        payload = {"type": "not-found"}
     cache.write_text(json.dumps(payload))
     time.sleep(0.05)
     return payload
