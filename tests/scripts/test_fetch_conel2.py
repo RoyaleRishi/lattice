@@ -17,11 +17,16 @@ SAMPLE = {
                 {"personal_entity_mention": "ignored", "entity": "Ignored"}
             ],
         },
-        {"turn_number": 1, "speaker": "SYSTEM", "utterance": "Me too!"},
+        # Trailing whitespace (37 of 290 raw conversations have it) must be
+        # rstripped or BlockSegmenter's strip() breaks the single-unit
+        # invariant; a whitespace-only turn must vanish entirely or the
+        # joined text gains a blank line.
+        {"turn_number": 1, "speaker": "SYSTEM", "utterance": "Me too! "},
+        {"turn_number": 2, "speaker": "SYSTEM", "utterance": "   "},
         {
-            "turn_number": 2,
+            "turn_number": 3,
             "speaker": "USER",
-            "utterance": "kid rock is fine",
+            "utterance": "kid rock is fine  ",
             "el_annotations": [
                 {"mention": "kid rock", "span": [0, 8], "entity": "Kid_Rock"}
             ],
@@ -42,6 +47,12 @@ def test_convert_dialogue_remaps_spans_and_corrects_the_known_defect():
     ]
     for m in row["mentions"]:
         assert row["text"][m["start"]:m["end"]] == m["surface"]
+
+
+def test_emitted_text_survives_the_block_segmenter():
+    text = convert_dialogue(SAMPLE)["text"]
+    assert text == text.strip()
+    assert "\n\n" not in text
 
 
 def test_personal_entity_annotations_are_excluded():

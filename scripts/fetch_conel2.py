@@ -5,7 +5,13 @@ Splits: Train/Val/Test JSON -> train/validation/test.jsonl. Personal-entity
 annotations are excluded (speaker-relative references, not shared concepts).
 Cluster id = the gold Wikipedia entity. One known corpus defect (a span
 including a trailing period) is fixed by the prefix-trim rule; anything else
-raises."""
+raises.
+
+Utterances are rstripped and whitespace-only turns dropped so the emitted
+text survives the block segmenter unchanged (37 of 290 raw conversations end
+with trailing whitespace, which BlockSegmenter's strip() would remove and
+break the gold-mentions single-unit invariant; no gold span extends into a
+stripped tail — verified corpus-wide)."""
 
 import argparse
 import hashlib
@@ -26,7 +32,9 @@ def convert_dialogue(dialogue: dict) -> dict:
     mentions: list[dict] = []
     offset = 0
     for turn in dialogue["turns"]:
-        utterance = turn["utterance"]
+        utterance = turn["utterance"].rstrip()
+        if not utterance:
+            continue  # a whitespace-only turn would emit a blank line ("\n\n")
         for ann in turn.get("el_annotations", []):
             start, end = ann["span"]
             surface = ann["mention"]
