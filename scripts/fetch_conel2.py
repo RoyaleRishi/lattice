@@ -30,6 +30,7 @@ SPLITS = {"Train": "train", "Val": "validation", "Test": "test"}
 def convert_dialogue(dialogue: dict) -> dict:
     texts: list[str] = []
     mentions: list[dict] = []
+    seen_spans: dict[tuple[int, int], str] = {}
     offset = 0
     for turn in dialogue["turns"]:
         utterance = turn["utterance"].rstrip()
@@ -46,6 +47,20 @@ def convert_dialogue(dialogue: dict) -> dict:
                         f"unfixable span in dialogue {dialogue['dialogue_id']}: "
                         f"{ann!r}"
                     )
+            # Mention keys are (doc, start, end): a duplicate span would
+            # silently collapse in every downstream dict, invisible to the
+            # metric's coverage gate. Exact re-annotations are skipped;
+            # conflicting cluster ids are a gold conflict and must raise.
+            span_key = (offset + start, offset + end)
+            previous = seen_spans.get(span_key)
+            if previous is not None:
+                if previous != ann["entity"]:
+                    raise ValueError(
+                        f"conflicting clusters for span {span_key} in dialogue "
+                        f"{dialogue['dialogue_id']}: {previous!r} vs {ann['entity']!r}"
+                    )
+                continue
+            seen_spans[span_key] = ann["entity"]
             mentions.append(
                 {
                     "start": offset + start,

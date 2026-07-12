@@ -1,4 +1,9 @@
+import pytest
 from scripts.fetch_ecbplus import convert_document, is_entity_tag
+
+# The converter must stay free of ElementTree truthiness DeprecationWarnings
+# (M3 final review, Minor 2).
+pytestmark = pytest.mark.filterwarnings("error::DeprecationWarning")
 
 SAMPLE_XML = """<Document doc_name="1_1ecbplus.xml" doc_id="DOC1">
 <token t_id="1" sentence="0" number="0">http</token>

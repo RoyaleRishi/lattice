@@ -58,7 +58,8 @@ def convert_document(
     text = "\n".join(lines)
 
     cluster_of: dict[str, str] = {}
-    for rel in root.find("Relations") or []:
+    relations = root.find("Relations")
+    for rel in relations if relations is not None else ():
         if rel.tag == "CROSS_DOC_COREF":
             cluster_id = rel.get("note")
         elif rel.tag == "INTRA_DOC_COREF":
@@ -69,7 +70,8 @@ def convert_document(
             cluster_of[source.get("m_id")] = cluster_id
 
     candidates: list[tuple[int, int, int, str, str]] = []
-    for m in root.find("Markables") or []:
+    markables = root.find("Markables")
+    for m in markables if markables is not None else ():
         anchors = sorted(int(a.get("t_id")) for a in m.findall("token_anchor"))
         if not anchors or not is_entity_tag(m.tag):
             continue

@@ -60,6 +60,44 @@ def test_personal_entity_annotations_are_excluded():
     assert all(m["cluster"] != "Ignored" for m in row["mentions"])
 
 
+def test_duplicate_span_same_cluster_is_deduped():
+    dialogue = {
+        "dialogue_id": "7",
+        "turns": [
+            {
+                "turn_number": 0,
+                "speaker": "USER",
+                "utterance": "kid rock rocks",
+                "el_annotations": [
+                    {"mention": "kid rock", "span": [0, 8], "entity": "Kid_Rock"},
+                    {"mention": "kid rock", "span": [0, 8], "entity": "Kid_Rock"},
+                ],
+            }
+        ],
+    }
+    row = convert_dialogue(dialogue)
+    assert len(row["mentions"]) == 1
+
+
+def test_duplicate_span_conflicting_clusters_raise():
+    dialogue = {
+        "dialogue_id": "8",
+        "turns": [
+            {
+                "turn_number": 0,
+                "speaker": "USER",
+                "utterance": "kid rock rocks",
+                "el_annotations": [
+                    {"mention": "kid rock", "span": [0, 8], "entity": "Kid_Rock"},
+                    {"mention": "kid rock", "span": [0, 8], "entity": "Dude"},
+                ],
+            }
+        ],
+    }
+    with pytest.raises(ValueError, match="conflicting clusters"):
+        convert_dialogue(dialogue)
+
+
 def test_unfixable_span_raises():
     broken = {
         "dialogue_id": "9",
