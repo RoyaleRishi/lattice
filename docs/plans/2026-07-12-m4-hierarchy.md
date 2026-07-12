@@ -344,8 +344,14 @@ def test_copula_flag_off_drops_copula_edges():
 
 
 def test_explicit_patterns_select_a_subset():
-    text = "fats such as olive oil. canola is a fat."
-    surfaces = ["fats", "olive oil", "canola", "fat"]
+    # AMENDED during execution (plan defect): the original fixture text
+    # ("fats such as olive oil. canola is a fat.") anchors "fat" via
+    # text.index inside "fats" at position 0; the overlap guard then eats
+    # the copula pair. "fat" must occur before "fats" in the text. Same
+    # intent: copula-only selection finds the copula edge and excludes the
+    # such-as edge.
+    text = "canola is a fat. fats such as olive oil."
+    surfaces = ["canola", "fat", "fats", "olive oil"]
     assert _edges(text, surfaces, patterns=["copula"]) == {("canola", "fat")}
 
 
@@ -1821,6 +1827,18 @@ git status
 Expected: full suite green, lint clean, working tree clean (data/ and reports/ are gitignored and must stay uncommitted).
 
 ---
+
+## Execution Amendments
+
+- Task 2, `test_explicit_patterns_select_a_subset`: fixture text reordered
+  (defect found during execution, 2026-07-12). The plan's `_edges` helper
+  anchors surfaces with naive `text.index`, which found "fat" inside "fats"
+  at position 0 — overlapping anchors the (correct) overlap guard skips, so
+  the intended copula anchor never formed. The pre-commit machine
+  verification missed this because it located anchors with the gazetteer
+  (whole-word matching) instead of the test helper's `text.index` — when
+  simulating a plan's tests, simulate the tests' own anchoring, not an
+  equivalent-looking one. Implementation unchanged (plan-verbatim).
 
 ## Self-Review Notes (already applied)
 
