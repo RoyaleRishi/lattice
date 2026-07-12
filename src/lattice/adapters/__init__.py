@@ -1,7 +1,12 @@
 """Importing this package registers all built-in adapters (spec §7.1)."""
 
 from lattice.adapters.concept_store import in_memory  # noqa: F401
-from lattice.adapters.dataset import inspec, mention_clusters, toy  # noqa: F401
+from lattice.adapters.dataset import (  # noqa: F401
+    inspec,
+    mention_clusters,
+    taxonomy,
+    toy,
+)
 from lattice.adapters.document_metric import clustering, f1_at_k  # noqa: F401
 from lattice.adapters.embedder import hashing, sentence_transformer  # noqa: F401
 from lattice.adapters.extractor import (  # noqa: F401
