@@ -7,7 +7,12 @@ from lattice.adapters.embedder import hashing, sentence_transformer  # noqa: F40
 from lattice.adapters.extractor import gold_mentions, noun_chunk, token  # noqa: F401
 from lattice.adapters.graph_integrator import in_memory as graph_in_memory  # noqa: F401
 from lattice.adapters.metric import label_f1  # noqa: F401
-from lattice.adapters.relation_inducer import co_occurrence, compound, hearst  # noqa: F401
+from lattice.adapters.relation_inducer import (  # noqa: F401
+    co_occurrence,
+    compound,
+    hearst,
+    union,
+)
 from lattice.adapters.resolver import embedding_nn, exact_label  # noqa: F401
 from lattice.adapters.scorer import (  # noqa: F401
     embedding_cosine,
