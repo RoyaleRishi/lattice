@@ -1,0 +1,58 @@
+# M5 integration sweep (spec §5): the first all-real pipeline configuration.
+# Intrinsic metrics judge the accreted graph; the resolver axis exposes the
+# redundancy/coherence tension so an operating point can be chosen without
+# gold. Requires the ml extras and cached models (scripts/fetch_models.py)
+# plus data/conel2 (scripts/fetch_conel2.py).
+
+[base.segmenter]
+name = "block"
+
+[base.extractor]
+name = "noun-chunk"
+
+[base.scorer]
+name = "embedding-cosine"
+
+[base.resolver]
+name = "exact-label"
+
+[base.relation_inducer]
+name = "union"
+[base.relation_inducer.params]
+members = [{ name = "hearst" }, { name = "compound" }]
+
+[base.graph_integrator]
+name = "in-memory"
+
+[base.embedder]
+name = "sentence-transformer"
+
+[base.concept_store]
+name = "in-memory"
+
+[base.run]
+on_error = "fail"
+seed = 0
+
+[base.dataset]
+name = "mention-clusters"
+[base.dataset.params]
+root = "data/conel2"
+split = "test"
+
+[[base.metrics]]
+name = "redundancy"
+
+[[base.metrics]]
+name = "hierarchy-sanity"
+
+[[base.document_metrics]]
+name = "coherence"
+
+[axes]
+resolver = [
+  { name = "exact-label" },
+  { name = "embedding-nn", params = { threshold = 0.90 } },
+  { name = "embedding-nn", params = { threshold = 0.75 } },
+  { name = "embedding-nn", params = { threshold = 0.65 } },
+]
