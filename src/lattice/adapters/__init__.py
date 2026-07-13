@@ -7,7 +7,11 @@ from lattice.adapters.dataset import (  # noqa: F401
     taxonomy,
     toy,
 )
-from lattice.adapters.document_metric import clustering, f1_at_k  # noqa: F401
+from lattice.adapters.document_metric import (  # noqa: F401
+    clustering,
+    coherence,
+    f1_at_k,
+)
 from lattice.adapters.embedder import hashing, sentence_transformer  # noqa: F401
 from lattice.adapters.extractor import (  # noqa: F401
     gazetteer,
