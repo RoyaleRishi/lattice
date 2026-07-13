@@ -11,7 +11,7 @@ from pydantic import Field
 from lattice.config.factory import build_orchestrator, instantiate
 from lattice.config.loader import load_config
 from lattice.config.schema import AdapterSpec, RunConfig
-from lattice.ports import Dataset, DocumentMetric, Metric
+from lattice.ports import Dataset, DocumentMetric, Embedder, Metric
 
 
 class ExperimentConfig(RunConfig):
@@ -34,12 +34,23 @@ def run_experiment(config: ExperimentConfig) -> RunReport:
     deltas = orchestrator.process_stream(dataset.documents())
     snapshot = orchestrator.snapshot()
     ground_truth = dataset.ground_truth()
+    # Intrinsic metrics may consume the embedder (M5 spec §3): a second
+    # instance from the same spec is deterministic, so pipeline and metric
+    # embeddings agree; instantiate() injects only where the constructor
+    # names the param.
+    metric_shared: dict[str, object] = {
+        "embedder": instantiate(Embedder, config.embedder)
+    }
     metric_results = {
-        spec.name: instantiate(Metric, spec).evaluate(snapshot, ground_truth)
+        spec.name: instantiate(Metric, spec, metric_shared).evaluate(
+            snapshot, ground_truth
+        )
         for spec in config.metrics
     }
     document_results = {
-        spec.name: instantiate(DocumentMetric, spec).evaluate_documents(deltas, ground_truth)
+        spec.name: instantiate(DocumentMetric, spec, metric_shared).evaluate_documents(
+            deltas, ground_truth
+        )
         for spec in config.document_metrics
     }
     duplicates = set(metric_results) & set(document_results)
