@@ -16,7 +16,12 @@ from lattice.adapters.extractor import (  # noqa: F401
     token,
 )
 from lattice.adapters.graph_integrator import in_memory as graph_in_memory  # noqa: F401
-from lattice.adapters.metric import edge_f1, label_f1, redundancy  # noqa: F401
+from lattice.adapters.metric import (  # noqa: F401
+    edge_f1,
+    hierarchy_sanity,
+    label_f1,
+    redundancy,
+)
 from lattice.adapters.relation_inducer import (  # noqa: F401
     co_occurrence,
     compound,
