@@ -165,8 +165,13 @@ configs/m5-conel2-sweep.toml reports/m5-conel2`.
 - **Unit, hierarchy-sanity:** planted 2-cycle a→b→a (1 component, 2 nodes),
   planted self-loop, chain a→b→c (max-depth 2), planted shortcut a→c beside
   a→b→c (1 shortcut), non-IS_A edges ignored, empty snapshot all-zeros.
-- **Contract:** `redundancy` and `hierarchy-sanity` join `MetricContract`;
-  `coherence` joins `DocumentMetricContract`.
+- **Contract:** `redundancy` and `hierarchy-sanity` join `MetricContract`.
+  `coherence` does NOT join `DocumentMetricContract` — that contract
+  mandates `test_unknown_document_raises` (a delta whose document is absent
+  from ground truth must raise), a gold-anchored semantic an intrinsic
+  metric definitionally lacks; coherence gets its own suite instead
+  (M3 gold-mentions precedent). [Amended at plan time: contract conflict
+  found during plan verification.]
 - **Runner injection:** a fake metric with an `embedder` constructor param
   receives one; `label-f1` (no param) still instantiates — both via a tiny
   experiment over the toy dataset.
