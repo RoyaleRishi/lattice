@@ -1147,6 +1147,17 @@ Expected: `test_standard_profile_constructs_and_ingests` PASSES (spaCy + MiniLM 
 
 ---
 
+## Execution Amendments
+
+- Task 3 (defect found during execution, 2026-07-13): the plan-mandated
+  `__version__ = "0.2.0"` contradicts the plan's own "existing tests pass
+  unchanged" constraint — `tests/test_import.py` hardcodes `"0.1.0"` and the
+  plan never audited existing tests for version literals. Sanctioned
+  resolution (implementer, same commit e07dea6): update that single
+  assertion literal to `"0.2.0"`. Task 7's criterion 4 reads "existing
+  tests untouched" with this one sanctioned exception. Lesson: a plan that
+  changes a constant must grep the test suite for that constant first.
+
 ## Self-Review Notes (already applied)
 
 - Spec coverage: §3→T1+T3+T6, §4.1→T3, §4.2→T2, §4.3→T4, §5→T5, §6 (ValueErrors in T3/T4 tests; JSONDecodeError in T4; ml ImportError path documented in README), §7→every task's tests, §8→T7.
