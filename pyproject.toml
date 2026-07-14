@@ -1,9 +1,12 @@
 [project]
 name = "lattice"
-version = "0.1.0"
+version = "0.2.0"
 description = "Concept-memory engine: documents in, an accreting normalized concept graph out"
 requires-python = ">=3.12"
 dependencies = ["pydantic>=2.7", "snowballstemmer>=2.2"]
+
+[project.optional-dependencies]
+ml = ["sentence-transformers>=3.0", "spacy>=3.7", "datasets>=2.19"]
 
 [dependency-groups]
 dev = ["pytest>=8.0", "ruff>=0.4"]
