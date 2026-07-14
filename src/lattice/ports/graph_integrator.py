@@ -15,4 +15,10 @@ class GraphIntegrator(ABC):
     def snapshot(self) -> GraphSnapshot: ...
 
     @abstractmethod
+    def restore(self, snapshot: GraphSnapshot) -> None:
+        """Replace internal state with the snapshot's contents (M6 spec §3:
+        the persistence hook — Engine.load hands back a saved graph)."""
+        ...
+
+    @abstractmethod
     def reset(self) -> None: ...

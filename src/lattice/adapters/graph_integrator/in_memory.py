@@ -37,6 +37,12 @@ class InMemoryGraphIntegrator(GraphIntegrator):
             ),
         )
 
+    def restore(self, snapshot: GraphSnapshot) -> None:
+        self._concepts = {concept.id: concept for concept in snapshot.concepts}
+        self._relations = {
+            (r.type, r.source_id, r.target_id): r for r in snapshot.relations
+        }
+
     def reset(self) -> None:
         self._concepts.clear()
         self._relations.clear()

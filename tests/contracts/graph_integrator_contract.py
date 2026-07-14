@@ -50,3 +50,23 @@ class GraphIntegratorContract:
         integrator.reset()
         snapshot = integrator.snapshot()
         assert snapshot.concepts == () and snapshot.relations == ()
+
+    def test_restore_replaces_state_and_round_trips(self):
+        source = self.make_integrator()
+        r1 = make_resolution(surface="vector store")
+        r2 = make_resolution(surface="encoder")
+        relation = Relation(
+            type="IS_A",
+            source_id=r1.concept.id,
+            target_id=r2.concept.id,
+            confidence=1.0,
+            provenance="d1",
+        )
+        source.apply([r1, r2], [relation])
+        saved = source.snapshot()
+
+        target = self.make_integrator()
+        target.apply([make_resolution(surface="stale state")], [])
+        target.restore(saved)
+        # restore REPLACES: the stale concept is gone, the saved graph is back
+        assert target.snapshot() == saved
