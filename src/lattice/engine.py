@@ -8,13 +8,20 @@
                                          # (install lattice[ml] + fetch models)
 """
 
+import json
 from collections.abc import Iterable
 from pathlib import Path
 
 from lattice.config.factory import build_orchestrator
 from lattice.config.loader import load_config
 from lattice.config.schema import RunConfig
-from lattice.core.types import Document, GraphDelta, GraphSnapshot
+from lattice.core.types import (
+    Concept,
+    Document,
+    GraphDelta,
+    GraphSnapshot,
+    Relation,
+)
 from lattice.graph_view import GraphView
 
 FORMAT_VERSION = 1
@@ -125,6 +132,88 @@ class Engine:
 
     def view(self) -> GraphView:
         return GraphView(self._orchestrator.snapshot())
+
+    def save(self, path: str | Path) -> None:
+        """Serialize the accreted graph + config to versioned JSON (format
+        v1, M6 spec §4.3). The concept store is not serialized separately:
+        resolvers upsert exactly the concepts the integrator holds, so the
+        snapshot is the single source of truth."""
+        from lattice import __version__  # inside the function: no cycle
+
+        snapshot = self._orchestrator.snapshot()
+        payload = {
+            "format_version": FORMAT_VERSION,
+            "lattice_version": __version__,
+            "profile": self.profile,
+            "config": self.config.model_dump(),
+            "document_counter": self._counter,
+            "concepts": [
+                {
+                    "id": c.id,
+                    "label": c.label,
+                    "embedding": list(c.embedding),
+                    "first_seen": c.first_seen,
+                    "updated_at": c.updated_at,
+                }
+                for c in snapshot.concepts
+            ],
+            "relations": [
+                {
+                    "type": r.type,
+                    "source_id": r.source_id,
+                    "target_id": r.target_id,
+                    "confidence": r.confidence,
+                    "provenance": r.provenance,
+                }
+                for r in snapshot.relations
+            ],
+        }
+        Path(path).write_text(json.dumps(payload, indent=2, sort_keys=True))
+
+    @classmethod
+    def load(cls, path: str | Path) -> "Engine":
+        """Rebuild an Engine from a save file. Resume-equivalence contract:
+        processing after load equals processing straight through."""
+        payload = json.loads(Path(path).read_text())
+        found = payload.get("format_version")
+        if found != FORMAT_VERSION:
+            raise ValueError(
+                f"unsupported save format_version {found!r} "
+                f"(this lattice reads {FORMAT_VERSION})"
+            )
+        engine = cls.__new__(cls)
+        engine._init(
+            RunConfig.model_validate(payload["config"]), payload["profile"]
+        )
+        concepts = tuple(
+            Concept(
+                id=c["id"],
+                label=c["label"],
+                embedding=tuple(c["embedding"]),
+                first_seen=c["first_seen"],
+                updated_at=c["updated_at"],
+            )
+            for c in payload["concepts"]
+        )
+        relations = tuple(
+            Relation(
+                type=r["type"],
+                source_id=r["source_id"],
+                target_id=r["target_id"],
+                confidence=r["confidence"],
+                provenance=r["provenance"],
+            )
+            for r in payload["relations"]
+        )
+        engine._orchestrator.graph_integrator.restore(
+            GraphSnapshot(concepts=concepts, relations=relations)
+        )
+        store = getattr(engine._orchestrator.resolver, "concept_store", None)
+        if store is not None:
+            for concept in concepts:
+                store.upsert(concept)
+        engine._counter = int(payload["document_counter"])
+        return engine
 
     def reset(self) -> None:
         """Empty the graph and restart the document counter."""
