@@ -925,8 +925,8 @@ HCFG = ExperimentConfig.model_validate({
 
 def test_bootstrap_holistic_runs_and_is_deterministic():
     a = bootstrap_holistic(HCFG, samples=5, seed=3)
-    b = bootstrap_holistic(HCFG, samples=5, seed=3)
-    assert a == b
+    assert a == bootstrap_holistic(HCFG, samples=5, seed=3)     # same seed -> identical
+    assert a != bootstrap_holistic(HCFG, samples=5, seed=4)     # different seed -> differs
     assert "redundancy.concept-count" in a
     assert len(a["redundancy.concept-count"]) == 5
 ```
@@ -1411,7 +1411,7 @@ plan's own text (not an implementer deviation).
    `test_clustering_aggregate_respects_multiplicity`, a hand-built case where duplicating a
    document changes b3-precision from 2/3 to 3/4 — values verified against the real
    `_aggregate`; the test fails iff the unique re-keying is removed. Also documents the
-   emit_records precondition (amendment note: guard-parity accepted as designed, see ledger).
+   emit_records precondition (amendment 5).
 5. **emit_records precondition (guard parity).** `emit_records` on `F1AtK`, `EdgeF1`, and
    `ClusteringMetric` deliberately does NOT re-validate inputs that `evaluate`/
    `evaluate_documents` already check — its sole caller `run_experiment_detailed` runs
@@ -1419,3 +1419,8 @@ plan's own text (not an implementer deviation).
    code plus verbatim-duplicated validation. Each `emit_records` carries a one-line
    precondition docstring stating this. (Contrast the Task 3 duplicate-name guard, amendment
    3, which was genuinely reachable and silently corrupting.)
+6. **Task 8 holistic-bootstrap test half-covered the property.**
+   `test_bootstrap_holistic_runs_and_is_deterministic` asserted same-seed determinism but
+   not that a different seed differs (the sibling `bootstrap` test checks both). Added
+   `assert a != bootstrap_holistic(HCFG, samples=5, seed=4)`; verified against the real
+   implementation (seed 3 → concept-count [2,2,2,2,2], seed 4 → [1,2,1,2,1]).
