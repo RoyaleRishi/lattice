@@ -393,6 +393,9 @@ def run_on_documents(
     """Run the pipeline over an explicit document list (a resample or a
     permutation) and return a flat {"<metric>.<key>": value} dict. Mirrors
     run_experiment's scoring but with a caller-supplied stream."""
+    duplicates = {s.name for s in config.metrics} & {s.name for s in config.document_metrics}
+    if duplicates:
+        raise ValueError(f"metric name(s) used by both families: {sorted(duplicates)}")
     orchestrator = build_orchestrator(config)
     deltas = orchestrator.process_stream(documents)
     snapshot = orchestrator.snapshot()
@@ -415,6 +418,9 @@ def run_experiment_detailed(
     """Run the experiment once and, for every macro/pooled Resamplable metric,
     capture a ResampleBundle of per-document detail for item-level bootstrap.
     Holistic and non-resamplable metrics contribute no bundle."""
+    duplicates = {s.name for s in config.metrics} & {s.name for s in config.document_metrics}
+    if duplicates:
+        raise ValueError(f"metric name(s) used by both families: {sorted(duplicates)}")
     orchestrator = build_orchestrator(config)
     dataset = instantiate(Dataset, config.dataset)
     deltas = orchestrator.process_stream(dataset.documents())
@@ -1353,3 +1359,30 @@ git commit -m "docs: interval analysis results across M2-M5"
 **Placeholder scan:** No TBD/TODO. Task 11 is an analysis/execution task (like the M4 fetch grind) with no unit test by nature; its steps carry exact commands. All code steps contain complete code.
 
 **Type consistency:** `EvaluationContext`, `ResampleBundle(kind, per_document, aggregate, global_context)`, `Interval(lo,hi,method)`, `DeltaResult`, `SpreadResult`, `bootstrap`/`jackknife`/`bootstrap_holistic`/`order_spread` signatures are consistent across Tasks 1–10. `_aggregate(records, ctx)` signature is uniform (macro/clustering ignore `ctx`).
+
+## Execution Amendments
+
+Authored by the observer during execution; each resolves a defect found in the
+plan's own text (not an implementer deviation).
+
+1. **Task 2 percentile literal (typo fix).** The Step-1 test asserted the 97.5th
+   percentile of `range(100)` is `97.525`; the correct linear-interpolation value is
+   `96.525` (position `0.975*99 = 96.525` → `96 + 0.525`). The lower bound `2.475` was
+   correct. The implementer corrected the literal; the reviewer re-derived it against
+   numpy. No algorithm changed.
+2. **ruff cleanliness.** The plan's literal code blocks (long single-line fixture-config
+   dicts, some unsorted imports) are not ruff-clean under this repo's `line-length = 100`,
+   `select = ["E","F","I","UP"]`. A cross-task formatting-only fix (`c7a32e2`) cleaned
+   Tasks 1–3 with no logic change; ruff-check-before-commit is now explicit in every
+   dispatch from Task 4 on. Implementers should format to the repo's ruff config even
+   where the plan's literal text does not.
+3. **Duplicate-metric-name guard (Task 3).** `run_on_documents` and
+   `run_experiment_detailed` now carry the same guard `run_experiment` has — raise
+   `ValueError(f"metric name(s) used by both families: {sorted(duplicates)}")` when a
+   name appears in both `config.metrics` and `config.document_metrics`. The plan's
+   original Task 3 code omitted it (a silent divergence flagged Important by the Task 3
+   reviewer); the guard is added above, plus a regression test per function. The
+   `test_detailed_returns_bundles_for_resamplable_only` test also switches from
+   `model_copy(update=...).model_dump()` (which emits a harmless
+   `PydanticSerializationUnexpectedValue` warning) to mutating `M5.model_dump()` before
+   `model_validate`.
