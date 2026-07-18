@@ -1059,8 +1059,31 @@ def test_order_spread_reports_stats_and_is_deterministic():
     assert isinstance(a[key], SpreadResult)
     assert a[key].range == a[key].max - a[key].min
     assert a[key].min <= a[key].max
-    # exact-label graph accretes commutatively -> concept count is order-invariant
+    # This fixture's pipeline is order-invariant, so the spread is 0. That alone
+    # does NOT prove the shuffle ran (a no-op shuffle also yields 0) — the shuffle
+    # mechanism is tested directly in test_order_spread_permutes_the_pool_and_holds_the_prefix.
     assert a[key].range == 0.0
+
+
+def test_order_spread_permutes_the_pool_and_holds_the_prefix(monkeypatch):
+    # order_spread's job is to VARY document order; on this fixture the pipeline is
+    # order-invariant, so metric spread cannot prove the shuffle happened. Stub
+    # run_on_documents to capture the orderings it receives and assert (a) the fixed
+    # prefix stays first and (b) the shuffled tail genuinely varies. Fails iff
+    # rng.shuffle is dropped (one distinct tail) or fixed/pool are swapped (prefix
+    # not held). Verified: seed 1 / 20 permutations / fixed_prefix 1 -> 2 distinct tails.
+    import lattice.harness.stats.permutation as permutation_module
+
+    seen: list[list[str]] = []
+
+    def spy(config, documents):
+        seen.append([d.id for d in documents])
+        return {"m.x": 0.0}
+
+    monkeypatch.setattr(permutation_module, "run_on_documents", spy)
+    order_spread(CFG, permutations=20, seed=1, fixed_prefix=1)
+    assert all(o[0] == seen[0][0] for o in seen)          # fixed prefix held first
+    assert len({tuple(o[1:]) for o in seen}) > 1          # pool genuinely shuffled
 ```
 
 - [ ] **Step 2: Run test to verify it fails**
@@ -1424,3 +1447,12 @@ plan's own text (not an implementer deviation).
    not that a different seed differs (the sibling `bootstrap` test checks both). Added
    `assert a != bootstrap_holistic(HCFG, samples=5, seed=4)`; verified against the real
    implementation (seed 3 → concept-count [2,2,2,2,2], seed 4 → [1,2,1,2,1]).
+7. **Task 9 order-permutation test could not detect a no-op shuffle.** The plan's config
+   (exact-label + co-occurrence + hashing) is order-invariant on every metric, so
+   `assert range == 0.0` passed whether or not `order_spread` actually shuffled — and
+   embedding-nn does not vary on the tiny fixture either (verified). Added
+   `test_order_spread_permutes_the_pool_and_holds_the_prefix`, which stubs
+   `run_on_documents`, captures the orderings, and asserts the fixed prefix stays first and
+   the shuffled tail genuinely varies (>1 distinct tail) — failing iff the shuffle is
+   dropped or fixed/pool are swapped. Verified: seed 1 / 20 permutations / fixed_prefix 1
+   → 2 distinct tails. The original invariance assertion is kept, honestly relabelled.
