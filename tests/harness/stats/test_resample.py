@@ -59,7 +59,7 @@ HCFG = ExperimentConfig.model_validate({
 
 def test_bootstrap_holistic_runs_and_is_deterministic():
     a = bootstrap_holistic(HCFG, samples=5, seed=3)
-    b = bootstrap_holistic(HCFG, samples=5, seed=3)
-    assert a == b
+    assert a == bootstrap_holistic(HCFG, samples=5, seed=3)     # same seed -> identical
+    assert a != bootstrap_holistic(HCFG, samples=5, seed=4)     # different seed -> differs
     assert "redundancy.concept-count" in a
     assert len(a["redundancy.concept-count"]) == 5
