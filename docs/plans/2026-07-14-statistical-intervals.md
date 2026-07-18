@@ -1351,22 +1351,24 @@ For each single-config run needed, materialize a one-config TOML from the sweep 
 
 ```bash
 mkdir -p reports/intervals
-# M3 exact-label and nn@0.90 (item-level, B=10000)
-python -m lattice.harness.stats configs/m3-conel2-exact.toml   reports/intervals/m3-conel2-exact  --seed 0
-python -m lattice.harness.stats configs/m3-conel2-nn090.toml   reports/intervals/m3-conel2-nn090  --seed 0
+# M3 exact-label and nn@0.90 (item-level, B=10000) — BOTH corpora (spec §6: ConEL-2 + ECB+)
+python -m lattice.harness.stats configs/m3-conel2-exact.toml    reports/intervals/m3-conel2-exact   --seed 0
+python -m lattice.harness.stats configs/m3-conel2-nn090.toml    reports/intervals/m3-conel2-nn090   --seed 0
+python -m lattice.harness.stats configs/m3-ecbplus-exact.toml   reports/intervals/m3-ecbplus-exact  --seed 0
+python -m lattice.harness.stats configs/m3-ecbplus-nn090.toml   reports/intervals/m3-ecbplus-nn090  --seed 0
 # M2 Inspec f1@k
-python -m lattice.harness.stats configs/m2b-f1atk.toml         reports/intervals/m2b              --seed 0
+python -m lattice.harness.stats configs/m2b-f1atk.toml          reports/intervals/m2b               --seed 0
 # M4: one per gold, glossary held fixed via --fixed-prefix 1
 for g in env-eurovoc food food-wordnet science science-eurovoc science-wordnet; do
   python -m lattice.harness.stats configs/m4-$g-union.toml reports/intervals/m4-$g --seed 0 --fixed-prefix 1
 done
 ```
 
-Note: create the collapsed single-config TOMLs (e.g. `configs/m3-conel2-nn090.toml`) by copying the sweep `base` and setting the one target adapter; these are config files, committed like the existing `configs/*.toml`. The `--fixed-prefix 1` holds the M4 glossary document (stream position 0) fixed while resampling the corpus.
+Note: create the collapsed single-config TOMLs (e.g. `configs/m3-conel2-nn090.toml`, `configs/m3-ecbplus-nn090.toml`) by copying the corresponding sweep `base` (`configs/m3-conel2-sweep.toml`, `configs/m3-ecbplus-sweep.toml`) and setting the one target adapter; these are config files, committed like the existing `configs/*.toml`. The `--fixed-prefix 1` holds the M4 glossary document (stream position 0) fixed while resampling the corpus.
 
 - [ ] **Step 2: Generate the M3 paired delta and threshold curve**
 
-Create a committed `scripts/interval_analysis.py` that composes the tested library primitives (`run_experiment_detailed`, `bootstrap`, `jackknife`, `paired_delta`, `percentile_interval`, `order_spread`) — no new algorithms, only orchestration. For the paired delta: run `bootstrap` on the M3 clustering bundle for the exact-label config and the nn@0.90 config with the SAME seed (identical document draws → paired), then `paired_delta(nn090_resamples["b3-f1"], exact_resamples["b3-f1"], est_nn090, est_exact)`. Record estimate, 95% CI, `prob_positive`. For the threshold curve: loop the grid (0.65/0.70/0.75/0.80/0.85/0.90/0.95), building a config per threshold, and tabulate `b3-f1` estimate + BCa CI, marking 0.90.
+Create a committed `scripts/interval_analysis.py` that composes the tested library primitives (`run_experiment_detailed`, `bootstrap`, `jackknife`, `paired_delta`, `percentile_interval`, `order_spread`) — no new algorithms, only orchestration. Do this for **both M3 corpora, ConEL-2 and ECB+** (spec §6). For the paired delta on each corpus: run `bootstrap` on the M3 clustering bundle for the exact-label config and the nn@0.90 config with the SAME seed (identical document draws → paired), then `paired_delta(nn090_resamples["b3-f1"], exact_resamples["b3-f1"], est_nn090, est_exact)`. Record estimate, 95% CI, `prob_positive` per corpus. For the threshold curve on each corpus: loop the grid (0.65/0.70/0.75/0.80/0.85/0.90/0.95), building a config per threshold, and tabulate `b3-f1` estimate + BCa CI, marking 0.90. The two corpora give an independent read on whether the resolver comparison replicates.
 
 - [ ] **Step 3: Generate holistic (M5) and permutation reports**
 
@@ -1375,16 +1377,16 @@ Create a committed `scripts/interval_analysis.py` that composes the tested libra
 python -m lattice.harness.stats configs/m5-conel2-nn090.toml reports/intervals/m5-conel2 --holistic --seed 0
 ```
 
-Order-permutation stability (K=40) is produced by `scripts/interval_analysis.py` calling `order_spread` on the M3 and M5 configs (`fixed_prefix=0`) and on the M4 union configs (`fixed_prefix=1`, so the glossary document stays first — expect ~0 spread, validating the glossary-first design).
+Order-permutation stability (K=40) is produced by `scripts/interval_analysis.py` calling `order_spread` on the M3 configs (both ConEL-2 and ECB+) and the M5 config (`fixed_prefix=0`) and on the M4 union configs (`fixed_prefix=1`, so the glossary document stays first — expect ~0 spread, validating the glossary-first design).
 
 - [ ] **Step 4: Write the committed results doc**
 
-Create `docs/results/2026-07-14-interval-analysis.md` containing: the headline M3 paired-delta verdict (nn@0.90 − exact-label b3-f1, CI, `prob_positive`, and the honest interpretation of whether "beats" survives); the per-milestone CI tables (M2 f1@k, M3 b3-f1 per config, M4 P/R/F1 per gold, M5 intrinsic); the threshold-sensitivity table with 0.90 marked and the note that 0.90 is not b3-f1-optimal (chosen for M5's tradeoff); the order-permutation spreads (M4 ~0 validates glossary-first); the explicit statement of the edge-set-pooled bootstrap semantics (multiplicity collapses by construction → the CI reflects corpus-composition variance); and the exact commands that regenerate every number.
+Create `docs/results/2026-07-14-interval-analysis.md` containing: the headline M3 paired-delta verdict on **both corpora** (nn@0.90 − exact-label b3-f1, CI, `prob_positive` for ConEL-2 AND ECB+, and the honest interpretation of whether "beats" survives on each — and whether the two corpora agree); the per-milestone CI tables (M2 f1@k, M3 b3-f1 per config for both corpora, M4 P/R/F1 per gold, M5 intrinsic); the threshold-sensitivity table (both M3 corpora) with 0.90 marked and the note that 0.90 is not b3-f1-optimal (chosen for M5's tradeoff); the order-permutation spreads (M4 ~0 validates glossary-first); the explicit statement of the edge-set-pooled bootstrap semantics (multiplicity collapses by construction → the CI reflects corpus-composition variance); and the exact commands that regenerate every number.
 
 - [ ] **Step 5: Commit**
 
 ```bash
-git add docs/results/2026-07-14-interval-analysis.md configs/m3-conel2-*.toml configs/m2b-f1atk.toml configs/m4-*-union.toml configs/m5-conel2-nn090.toml scripts/  # only newly-created config/script files
+git add docs/results/2026-07-14-interval-analysis.md configs/m3-conel2-*.toml configs/m3-ecbplus-*.toml configs/m2b-f1atk.toml configs/m4-*-union.toml configs/m5-conel2-nn090.toml scripts/  # only newly-created config/script files
 git commit -m "docs: interval analysis results across M2-M5"
 ```
 
@@ -1456,3 +1458,11 @@ plan's own text (not an implementer deviation).
    the shuffled tail genuinely varies (>1 distinct tail) — failing iff the shuffle is
    dropped or fixed/pool are swapped. Verified: seed 1 / 20 permutations / fixed_prefix 1
    → 2 distinct tails. The original invariance assertion is kept, honestly relabelled.
+8. **Task 11 omitted ECB+ for M3 (plan-vs-spec scope gap).** Spec §6 lists "M3 ConEL-2 +
+   ECB+" with all four columns checked, and the user chose "full matrix, everything," but
+   the plan's Task 11 wired only ConEL-2 and left ECB+ as an unused precondition. Task 11
+   now runs the full M3 treatment (item-level bootstrap CI, paired delta at nn@0.90,
+   threshold curve, order-permutation) on BOTH ConEL-2 and ECB+, using the existing
+   `configs/m3-ecbplus-sweep.toml` base. The two corpora give an independent read on whether
+   the resolver comparison replicates — directly responsive to the credibility critique that
+   started this track. `data/ecbplus` (206-line test split) is present; cost is bounded.
