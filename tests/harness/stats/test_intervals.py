@@ -1,5 +1,7 @@
 from lattice.harness.stats.intervals import (
-    bca_interval, paired_delta, percentile_interval,
+    bca_interval,
+    paired_delta,
+    percentile_interval,
 )
 
 

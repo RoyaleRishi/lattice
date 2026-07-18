@@ -13,7 +13,7 @@ from lattice.config.factory import build_orchestrator, instantiate
 from lattice.config.loader import load_config
 from lattice.config.schema import AdapterSpec, RunConfig
 from lattice.core.types import Document
-from lattice.harness.stats.records import EvaluationContext, ResampleBundle, Resamplable
+from lattice.harness.stats.records import EvaluationContext, Resamplable, ResampleBundle
 from lattice.ports import Dataset, DocumentMetric, Embedder, Metric
 
 
@@ -82,10 +82,14 @@ def run_on_documents(
     metric_shared: dict[str, object] = {"embedder": instantiate(Embedder, config.embedder)}
     flat: dict[str, float] = {}
     for spec in config.metrics:
-        for key, value in instantiate(Metric, spec, metric_shared).evaluate(snapshot, ground_truth).items():
+        for key, value in instantiate(Metric, spec, metric_shared).evaluate(
+            snapshot, ground_truth
+        ).items():
             flat[f"{spec.name}.{key}"] = value
     for spec in config.document_metrics:
-        for key, value in instantiate(DocumentMetric, spec, metric_shared).evaluate_documents(deltas, ground_truth).items():
+        for key, value in instantiate(DocumentMetric, spec, metric_shared).evaluate_documents(
+            deltas, ground_truth
+        ).items():
             flat[f"{spec.name}.{key}"] = value
     return flat
 

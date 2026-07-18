@@ -1,11 +1,15 @@
 import pytest
 
 from lattice.core.types import GraphSnapshot
-from lattice.harness.stats.records import EvaluationContext, ResampleBundle, Resamplable
+from lattice.harness.stats.records import EvaluationContext, Resamplable, ResampleBundle
 
 
 def test_evaluation_context_holds_the_three_inputs():
-    ctx = EvaluationContext(deltas=(), snapshot=GraphSnapshot(concepts=(), relations=()), ground_truth={"k": 1})
+    ctx = EvaluationContext(
+        deltas=(),
+        snapshot=GraphSnapshot(concepts=(), relations=()),
+        ground_truth={"k": 1},
+    )
     assert ctx.ground_truth == {"k": 1}
     assert ctx.snapshot.concepts == ()
 

@@ -1,19 +1,27 @@
-from lattice.core.types import GraphDelta
-from lattice.harness.runner import (
-    ExperimentConfig, run_experiment, run_experiment_detailed, run_on_documents,
-)
 from lattice.config.factory import instantiate
+from lattice.harness.runner import (
+    ExperimentConfig,
+    run_experiment,
+    run_experiment_detailed,
+    run_on_documents,
+)
 from lattice.ports import Dataset
 
 M5 = ExperimentConfig.model_validate({
     "segmenter": {"name": "block"},
-    "extractor": {"name": "gold-mentions", "params": {"root": "tests/fixtures/mini_clusters_conel", "split": "test"}},
+    "extractor": {
+        "name": "gold-mentions",
+        "params": {"root": "tests/fixtures/mini_clusters_conel", "split": "test"},
+    },
     "scorer": {"name": "passthrough"},
     "resolver": {"name": "embedding-nn", "params": {"threshold": 0.8}},
     "relation_inducer": {"name": "co-occurrence"},
     "graph_integrator": {"name": "in-memory"},
     "embedder": {"name": "hashing"},
-    "dataset": {"name": "mention-clusters", "params": {"root": "tests/fixtures/mini_clusters_conel", "split": "test"}},
+    "dataset": {
+        "name": "mention-clusters",
+        "params": {"root": "tests/fixtures/mini_clusters_conel", "split": "test"},
+    },
     "metrics": [{"name": "redundancy"}],
     "document_metrics": [{"name": "clustering"}],
 })
@@ -56,7 +64,9 @@ class ToyMacro(DocumentMetric, Resamplable):
 def test_detailed_returns_bundles_for_resamplable_only():
     # metrics=[] so only the resamplable toy-macro document_metric yields a bundle.
     config = ExperimentConfig.model_validate(
-        M5.model_copy(update={"document_metrics": [{"name": "toy-macro"}], "metrics": []}).model_dump()
+        M5.model_copy(
+            update={"document_metrics": [{"name": "toy-macro"}], "metrics": []}
+        ).model_dump()
     )
     report, bundles = run_experiment_detailed(config)
     assert set(bundles) == {"toy-macro"}
