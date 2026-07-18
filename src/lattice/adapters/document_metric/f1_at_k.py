@@ -3,12 +3,17 @@ from collections.abc import Sequence
 import snowballstemmer
 
 from lattice.core.types import GraphDelta
+from lattice.harness.stats.records import (
+    EvaluationContext,
+    Resamplable,
+    ResampleBundle,
+)
 from lattice.ports import DocumentMetric
 from lattice.registry.registry import register
 
 
 @register(DocumentMetric, "f1-at-k")
-class F1AtK(DocumentMetric):
+class F1AtK(DocumentMetric, Resamplable):
     """Literature-standard keyphrase evaluation (M2 spec §6.5): per document,
     the top-k selected surfaces (salience desc, ties lexicographic) are
     compared to gold keyphrases as Snowball-stemmed exact phrase matches;
@@ -17,6 +22,8 @@ class F1AtK(DocumentMetric):
     Requires the scorer's top_k >= max(ks): rankings are computed over the
     scorer-selected mentions, so metrics at k beyond the scorer's selection
     depth saturate at the selection-depth value."""
+
+    kind = "macro"
 
     def __init__(self, ks: list[int] | None = None):
         self.ks = list(ks) if ks is not None else [5, 10, 15]
@@ -33,6 +40,29 @@ class F1AtK(DocumentMetric):
                 best[surface] = scored.salience
         return [s for s, _ in sorted(best.items(), key=lambda kv: (-kv[1], kv[0]))]
 
+    def _per_document_scores(
+        self, delta: GraphDelta, by_document: dict
+    ) -> dict[str, float]:
+        if delta.document_id not in by_document:
+            raise ValueError(f"document {delta.document_id!r} missing from ground truth")
+        gold = {self._stem_phrase(p) for p in by_document[delta.document_id]}
+        ranked = self._ranked_unique_surfaces(delta)
+        scores: dict[str, float] = {}
+        for k in self.ks:
+            predicted = {self._stem_phrase(s) for s in ranked[:k]}
+            tp = len(gold & predicted)
+            precision = tp / len(predicted) if predicted else 0.0
+            recall = tp / len(gold) if gold else 0.0
+            f1 = (
+                2 * precision * recall / (precision + recall)
+                if (precision + recall)
+                else 0.0
+            )
+            scores[f"precision@{k}"] = precision
+            scores[f"recall@{k}"] = recall
+            scores[f"f1@{k}"] = f1
+        return scores
+
     def evaluate_documents(
         self, deltas: Sequence[GraphDelta], ground_truth: dict[str, object]
     ) -> dict[str, float]:
@@ -42,33 +72,24 @@ class F1AtK(DocumentMetric):
         deltas = list(deltas)
         if not deltas:
             raise ValueError("no documents to evaluate")
-        results: dict[str, float] = {}
-        for k in self.ks:
-            precisions: list[float] = []
-            recalls: list[float] = []
-            f1s: list[float] = []
-            for delta in deltas:
-                if delta.document_id not in by_document:
-                    raise ValueError(
-                        f"document {delta.document_id!r} missing from ground truth"
-                    )
-                gold = {self._stem_phrase(p) for p in by_document[delta.document_id]}
-                predicted = {
-                    self._stem_phrase(s) for s in self._ranked_unique_surfaces(delta)[:k]
-                }
-                true_positives = len(gold & predicted)
-                precision = true_positives / len(predicted) if predicted else 0.0
-                recall = true_positives / len(gold) if gold else 0.0
-                f1 = (
-                    2 * precision * recall / (precision + recall)
-                    if (precision + recall) > 0
-                    else 0.0
-                )
-                precisions.append(precision)
-                recalls.append(recall)
-                f1s.append(f1)
-            count = len(deltas)
-            results[f"precision@{k}"] = sum(precisions) / count
-            results[f"recall@{k}"] = sum(recalls) / count
-            results[f"f1@{k}"] = sum(f1s) / count
-        return results
+        per_doc = [self._per_document_scores(d, by_document) for d in deltas]
+        return self._aggregate(per_doc, {})
+
+    @staticmethod
+    def _aggregate(records: list, ctx: dict) -> dict[str, float]:
+        keys = records[0].keys()
+        n = len(records)
+        return {k: sum(r[k] for r in records) / n for k in keys}
+
+    def emit_records(self, context: EvaluationContext) -> ResampleBundle:
+        by_document = context.ground_truth.get("keyphrases_by_document")
+        if not isinstance(by_document, dict):
+            raise ValueError('f1-at-k requires ground_truth["keyphrases_by_document"]')
+        return ResampleBundle(
+            kind="macro",
+            per_document={
+                d.document_id: self._per_document_scores(d, by_document)
+                for d in context.deltas
+            },
+            aggregate=self._aggregate,
+        )
