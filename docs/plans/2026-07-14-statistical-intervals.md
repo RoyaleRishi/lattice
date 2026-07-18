@@ -705,6 +705,9 @@ Equivalence verified: on the full set, unique prefixes make keys distinct but pr
 
 ```python
 # tests/harness/stats/test_clustering_resample.py
+import pytest
+
+from lattice.adapters.document_metric.clustering import ClusteringMetric
 from lattice.harness.runner import ExperimentConfig, run_experiment_detailed
 
 CFG = ExperimentConfig.model_validate({
@@ -720,16 +723,30 @@ CFG = ExperimentConfig.model_validate({
 })
 
 
-def test_clustering_equivalence_and_multiplicity():
+def test_clustering_equivalence():
     report, bundles = run_experiment_detailed(CFG)
     bundle = bundles["clustering"]
     assert bundle.kind == "pooled"
     doc_ids = list(bundle.per_document)
     records = [bundle.per_document[d] for d in doc_ids]
     assert bundle.aggregate(records, bundle.global_context) == report.metrics["clustering"]
-    # duplicating one document must not collapse or crash; keys stay the same set
-    dup = bundle.aggregate(records + [records[0]], bundle.global_context)
-    assert set(dup) == set(report.metrics["clustering"])
+
+
+def test_clustering_aggregate_respects_multiplicity():
+    # Hand-built records: doc A has one perfect-precision mention; doc B has two
+    # mentions sharing a predicted cluster split across two gold clusters
+    # (precision 1/2 each). Duplicating doc A must reweight the B3-precision mean
+    # toward A — which only happens if _aggregate re-keys each document instance
+    # uniquely. A collapsed (non-prefixed) implementation gives the SAME value for
+    # [A,B] and [A,A,B], so this test fails iff the index-prefixing is removed.
+    # Verified against the real _aggregate: 2/3 and 3/4.
+    doc_a = [("A:0-1", "C1", "G1")]
+    doc_b = [("B:0-1", "C2", "G2"), ("B:2-3", "C2", "G3")]
+    base = ClusteringMetric._aggregate([doc_a, doc_b], {})
+    dup = ClusteringMetric._aggregate([doc_a, doc_a, doc_b], {})
+    assert base["b3-precision"] == pytest.approx(2 / 3)   # (1 + 1/2 + 1/2) / 3
+    assert dup["b3-precision"] == pytest.approx(3 / 4)     # (1 + 1 + 1/2 + 1/2) / 4
+    assert dup["b3-precision"] != base["b3-precision"]
 ```
 
 - [ ] **Step 2: Run test to verify it fails**
@@ -1386,3 +1403,19 @@ plan's own text (not an implementer deviation).
    `model_copy(update=...).model_dump()` (which emits a harmless
    `PydanticSerializationUnexpectedValue` warning) to mutating `M5.model_dump()` before
    `model_validate`.
+4. **Task 6 multiplicity test was a tautology.** The plan's original
+   `test_clustering_equivalence_and_multiplicity` asserted `set(dup) == set(report.metrics
+   ["clustering"])` — but `_aggregate` always returns the same four keys, so that assertion
+   passes even if the index-prefixing (multiplicity) logic is missing or broken. Split into
+   `test_clustering_equivalence` (the real equivalence check, kept) and
+   `test_clustering_aggregate_respects_multiplicity`, a hand-built case where duplicating a
+   document changes b3-precision from 2/3 to 3/4 — values verified against the real
+   `_aggregate`; the test fails iff the unique re-keying is removed. Also documents the
+   emit_records precondition (amendment note: guard-parity accepted as designed, see ledger).
+5. **emit_records precondition (guard parity).** `emit_records` on `F1AtK`, `EdgeF1`, and
+   `ClusteringMetric` deliberately does NOT re-validate inputs that `evaluate`/
+   `evaluate_documents` already check — its sole caller `run_experiment_detailed` runs
+   evaluate first on the same inputs, so duplicating those guards would be unreachable dead
+   code plus verbatim-duplicated validation. Each `emit_records` carries a one-line
+   precondition docstring stating this. (Contrast the Task 3 duplicate-name guard, amendment
+   3, which was genuinely reachable and silently corrupting.)
