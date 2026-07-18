@@ -1,3 +1,5 @@
+import pytest
+
 from lattice.config.factory import instantiate
 from lattice.harness.runner import (
     ExperimentConfig,
@@ -39,6 +41,27 @@ def test_run_on_documents_matches_run_experiment_on_full_stream():
     assert flat == expected
 
 
+def test_run_on_documents_rejects_name_in_both_families():
+    from lattice.config.factory import instantiate
+    from lattice.ports import Dataset
+    data = M5.model_dump()
+    data["metrics"] = [{"name": "clustering"}]
+    data["document_metrics"] = [{"name": "clustering"}]
+    config = ExperimentConfig.model_validate(data)
+    docs = list(instantiate(Dataset, config.dataset).documents())
+    with pytest.raises(ValueError, match="both families"):
+        run_on_documents(config, docs)
+
+
+def test_run_experiment_detailed_rejects_name_in_both_families():
+    data = M5.model_dump()
+    data["metrics"] = [{"name": "clustering"}]
+    data["document_metrics"] = [{"name": "clustering"}]
+    config = ExperimentConfig.model_validate(data)
+    with pytest.raises(ValueError, match="both families"):
+        run_experiment_detailed(config)
+
+
 # A test-only resamplable metric, registered at MODULE level (import-time, once):
 # registry.register raises on duplicate names, so never register inside a test body.
 from lattice.harness.stats.records import Resamplable, ResampleBundle  # noqa: E402
@@ -63,11 +86,9 @@ class ToyMacro(DocumentMetric, Resamplable):
 
 def test_detailed_returns_bundles_for_resamplable_only():
     # metrics=[] so only the resamplable toy-macro document_metric yields a bundle.
-    config = ExperimentConfig.model_validate(
-        M5.model_copy(
-            update={"document_metrics": [{"name": "toy-macro"}], "metrics": []}
-        ).model_dump()
-    )
+    data = M5.model_dump()
+    data.update({"document_metrics": [{"name": "toy-macro"}], "metrics": []})
+    config = ExperimentConfig.model_validate(data)
     report, bundles = run_experiment_detailed(config)
     assert set(bundles) == {"toy-macro"}
     assert bundles["toy-macro"].kind == "macro"

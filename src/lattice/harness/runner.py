@@ -74,6 +74,9 @@ def run_on_documents(
     """Run the pipeline over an explicit document list (a resample or a
     permutation) and return a flat {"<metric>.<key>": value} dict. Mirrors
     run_experiment's scoring but with a caller-supplied stream."""
+    duplicates = {s.name for s in config.metrics} & {s.name for s in config.document_metrics}
+    if duplicates:
+        raise ValueError(f"metric name(s) used by both families: {sorted(duplicates)}")
     orchestrator = build_orchestrator(config)
     deltas = orchestrator.process_stream(documents)
     snapshot = orchestrator.snapshot()
@@ -100,6 +103,9 @@ def run_experiment_detailed(
     """Run the experiment once and, for every macro/pooled Resamplable metric,
     capture a ResampleBundle of per-document detail for item-level bootstrap.
     Holistic and non-resamplable metrics contribute no bundle."""
+    duplicates = {s.name for s in config.metrics} & {s.name for s in config.document_metrics}
+    if duplicates:
+        raise ValueError(f"metric name(s) used by both families: {sorted(duplicates)}")
     orchestrator = build_orchestrator(config)
     dataset = instantiate(Dataset, config.dataset)
     deltas = orchestrator.process_stream(dataset.documents())
