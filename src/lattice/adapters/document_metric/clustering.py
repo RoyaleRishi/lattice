@@ -83,9 +83,7 @@ class ClusteringMetric(DocumentMetric, Resamplable):
         including mention-coverage completeness; assumes non-empty,
         coverage-complete input and does not re-validate. The bare
         gold[mention_key] lookup below relies on this."""
-        by_mention = context.ground_truth.get("clusters_by_mention")
-        if not isinstance(by_mention, dict):
-            raise ValueError('clustering requires ground_truth["clusters_by_mention"]')
+        by_mention = context.ground_truth["clusters_by_mention"]
         gold = {str(k): str(v) for k, v in by_mention.items()}
         per_document: dict[str, list] = {}
         for delta in context.deltas:
