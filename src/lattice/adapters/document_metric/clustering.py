@@ -3,6 +3,7 @@ from collections.abc import Sequence
 from math import comb
 
 from lattice.core.types import GraphDelta
+from lattice.harness.stats.records import EvaluationContext, Resamplable, ResampleBundle
 from lattice.ports import DocumentMetric
 from lattice.registry.registry import register
 
@@ -49,13 +50,52 @@ def _ari(pred: dict[str, str], gold: dict[str, str]) -> float:
 
 
 @register(DocumentMetric, "clustering")
-class ClusteringMetric(DocumentMetric):
+class ClusteringMetric(DocumentMetric, Resamplable):
     """Cross-document clustering quality over gold mentions (M3 spec §4.5).
     Predicted clusters group mention keys f"{doc_id}:{start}-{end}" by the
     resolved concept id across ALL deltas; gold comes from
     ground_truth["clusters_by_mention"]. Coverage must match 1:1 in both
     directions — the gold-mention protocol guarantees it, so any mismatch is
     a broken config, never a metric decision (spec §7)."""
+
+    kind = "pooled"
+
+    @staticmethod
+    def _aggregate(records: list, ctx: dict) -> dict[str, float]:
+        pred: dict[str, str] = {}
+        gold: dict[str, str] = {}
+        for index, rows in enumerate(records):
+            for mention_key, pred_cluster, gold_cluster in rows:
+                key = f"{index}:{mention_key}"
+                pred[key] = pred_cluster
+                gold[key] = gold_cluster
+        precision, recall, f1 = _b_cubed(pred, gold)
+        return {
+            "b3-precision": precision,
+            "b3-recall": recall,
+            "b3-f1": f1,
+            "ari": _ari(pred, gold),
+        }
+
+    def emit_records(self, context: EvaluationContext) -> ResampleBundle:
+        """Precondition: only called after evaluate_documents() has validated
+        the same inputs (run_experiment_detailed guarantees this ordering) —
+        including mention-coverage completeness; assumes non-empty,
+        coverage-complete input and does not re-validate. The bare
+        gold[mention_key] lookup below relies on this."""
+        by_mention = context.ground_truth.get("clusters_by_mention")
+        if not isinstance(by_mention, dict):
+            raise ValueError('clustering requires ground_truth["clusters_by_mention"]')
+        gold = {str(k): str(v) for k, v in by_mention.items()}
+        per_document: dict[str, list] = {}
+        for delta in context.deltas:
+            rows = []
+            for resolution in delta.resolutions:
+                start, end = resolution.mention.mention.span
+                mention_key = f"{delta.document_id}:{start}-{end}"
+                rows.append((mention_key, resolution.concept.id, gold[mention_key]))
+            per_document[delta.document_id] = rows
+        return ResampleBundle(kind="pooled", per_document=per_document, aggregate=self._aggregate)
 
     def evaluate_documents(
         self, deltas: Sequence[GraphDelta], ground_truth: dict[str, object]
