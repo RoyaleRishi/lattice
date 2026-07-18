@@ -82,6 +82,9 @@ class F1AtK(DocumentMetric, Resamplable):
         return {k: sum(r[k] for r in records) / n for k in keys}
 
     def emit_records(self, context: EvaluationContext) -> ResampleBundle:
+        """Precondition: only called after evaluate_documents() has validated the
+        same inputs (run_experiment_detailed guarantees this ordering); assumes
+        non-empty, ground-truth-complete input and does not re-validate."""
         by_document = context.ground_truth.get("keyphrases_by_document")
         if not isinstance(by_document, dict):
             raise ValueError('f1-at-k requires ground_truth["keyphrases_by_document"]')
