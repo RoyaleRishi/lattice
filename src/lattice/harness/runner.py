@@ -2,6 +2,7 @@
 documents → snapshot the graph → score with metrics → emit a report stamped
 with the fully resolved config (spec §7 reproducibility)."""
 
+from collections.abc import Sequence
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -11,6 +12,8 @@ from pydantic import Field
 from lattice.config.factory import build_orchestrator, instantiate
 from lattice.config.loader import load_config
 from lattice.config.schema import AdapterSpec, RunConfig
+from lattice.core.types import Document
+from lattice.harness.stats.records import EvaluationContext, ResampleBundle, Resamplable
 from lattice.ports import Dataset, DocumentMetric, Embedder, Metric
 
 
@@ -63,6 +66,63 @@ def run_experiment(config: ExperimentConfig) -> RunReport:
         errors=tuple(error for delta in deltas for error in delta.errors),
         metrics=all_metrics,
     )
+
+
+def run_on_documents(
+    config: ExperimentConfig, documents: Sequence[Document]
+) -> dict[str, float]:
+    """Run the pipeline over an explicit document list (a resample or a
+    permutation) and return a flat {"<metric>.<key>": value} dict. Mirrors
+    run_experiment's scoring but with a caller-supplied stream."""
+    orchestrator = build_orchestrator(config)
+    deltas = orchestrator.process_stream(documents)
+    snapshot = orchestrator.snapshot()
+    dataset = instantiate(Dataset, config.dataset)
+    ground_truth = dataset.ground_truth()
+    metric_shared: dict[str, object] = {"embedder": instantiate(Embedder, config.embedder)}
+    flat: dict[str, float] = {}
+    for spec in config.metrics:
+        for key, value in instantiate(Metric, spec, metric_shared).evaluate(snapshot, ground_truth).items():
+            flat[f"{spec.name}.{key}"] = value
+    for spec in config.document_metrics:
+        for key, value in instantiate(DocumentMetric, spec, metric_shared).evaluate_documents(deltas, ground_truth).items():
+            flat[f"{spec.name}.{key}"] = value
+    return flat
+
+
+def run_experiment_detailed(
+    config: ExperimentConfig,
+) -> tuple[RunReport, dict[str, ResampleBundle]]:
+    """Run the experiment once and, for every macro/pooled Resamplable metric,
+    capture a ResampleBundle of per-document detail for item-level bootstrap.
+    Holistic and non-resamplable metrics contribute no bundle."""
+    orchestrator = build_orchestrator(config)
+    dataset = instantiate(Dataset, config.dataset)
+    deltas = orchestrator.process_stream(dataset.documents())
+    snapshot = orchestrator.snapshot()
+    ground_truth = dataset.ground_truth()
+    metric_shared: dict[str, object] = {"embedder": instantiate(Embedder, config.embedder)}
+    context = EvaluationContext(tuple(deltas), snapshot, ground_truth)
+    metric_results: dict[str, dict[str, float]] = {}
+    document_results: dict[str, dict[str, float]] = {}
+    bundles: dict[str, ResampleBundle] = {}
+    for spec in config.metrics:
+        metric = instantiate(Metric, spec, metric_shared)
+        metric_results[spec.name] = metric.evaluate(snapshot, ground_truth)
+        if isinstance(metric, Resamplable) and metric.kind in ("macro", "pooled"):
+            bundles[spec.name] = metric.emit_records(context)
+    for spec in config.document_metrics:
+        metric = instantiate(DocumentMetric, spec, metric_shared)
+        document_results[spec.name] = metric.evaluate_documents(deltas, ground_truth)
+        if isinstance(metric, Resamplable) and metric.kind in ("macro", "pooled"):
+            bundles[spec.name] = metric.emit_records(context)
+    report = RunReport(
+        config=config.model_dump(),
+        documents_processed=len(deltas),
+        errors=tuple(error for delta in deltas for error in delta.errors),
+        metrics={**metric_results, **document_results},
+    )
+    return report, bundles
 
 
 def run_from_path(path: str | Path) -> RunReport:
