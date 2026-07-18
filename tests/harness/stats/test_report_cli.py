@@ -41,3 +41,13 @@ def test_write_report_is_json_and_sorted(tmp_path):
     assert path.name == "interval-report.json"
     loaded = json.loads(path.read_text())
     assert loaded["metrics"]["edge-f1"]["f1"]["estimate"] == 1.0
+
+
+def test_analyze_item_level_honors_fixed_prefix():
+    # Holding stream doc 0 (M4's glossary) fixed changes the recall CI but not the
+    # point estimate: without it, resamples can drop the glossary's compound edges,
+    # widening the interval. Fails if the item-level branch ignores fixed_prefix.
+    free = analyze(CFG, samples=400, seed=0, fixed_prefix=0)["metrics"]["edge-f1"]["recall"]
+    held = analyze(CFG, samples=400, seed=0, fixed_prefix=1)["metrics"]["edge-f1"]["recall"]
+    assert free["estimate"] == held["estimate"] == 1.0     # point estimate unaffected
+    assert free["bca"] != held["bca"]                      # CI reflects the held glossary

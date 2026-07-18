@@ -6,9 +6,15 @@ import json
 from collections.abc import Sequence
 from pathlib import Path
 
-from lattice.harness.runner import ExperimentConfig, run_experiment_detailed
+from lattice.config.factory import instantiate
+from lattice.harness.runner import (
+    ExperimentConfig,
+    run_experiment_detailed,
+    run_on_documents,
+)
 from lattice.harness.stats.intervals import bca_interval, percentile_interval
 from lattice.harness.stats.resample import bootstrap, bootstrap_holistic, jackknife
+from lattice.ports import Dataset
 
 
 def _iv(estimate: float, resamples: list[float], jack: list[float], level: float) -> dict:
@@ -37,10 +43,6 @@ def analyze(
             config, samples=samples, seed=seed, fixed_prefix=fixed_prefix
         )
         # holistic point estimates: one clean run over the full stream
-        from lattice.config.factory import instantiate
-        from lattice.harness.runner import run_on_documents
-        from lattice.ports import Dataset
-
         documents = list(instantiate(Dataset, config.dataset).documents())
         estimates = run_on_documents(config, documents)
         for flat_key, resamples in dists.items():
@@ -54,13 +56,12 @@ def analyze(
     else:
         report_full, bundles = run_experiment_detailed(config)
         for name, bundle in bundles.items():
-            dists = bootstrap(bundle, samples=samples, seed=seed, fixed_doc_ids=fixed_doc_ids)
-            jacks = jackknife(bundle, fixed_doc_ids=fixed_doc_ids)
+            fixed_ids = list(fixed_doc_ids) or list(bundle.per_document)[:fixed_prefix]
+            dists = bootstrap(bundle, samples=samples, seed=seed, fixed_doc_ids=fixed_ids)
+            jacks = jackknife(bundle, fixed_doc_ids=fixed_ids)
             for key, resamples in dists.items():
                 estimate = report_full.metrics[name][key]
-                metrics.setdefault(name, {})[key] = _iv(
-                    estimate, resamples, jacks[key], level
-                )
+                metrics.setdefault(name, {})[key] = _iv(estimate, resamples, jacks[key], level)
     return {
         "seed": seed,
         "level": level,
