@@ -3,12 +3,13 @@ from itertools import combinations
 
 from lattice.core.types import GraphDelta
 from lattice.core.vectors import cosine
+from lattice.harness.stats.records import Resamplable
 from lattice.ports import DocumentMetric, Embedder
 from lattice.registry.registry import register
 
 
 @register(DocumentMetric, "coherence")
-class Coherence(DocumentMetric):
+class Coherence(DocumentMetric, Resamplable):
     """Intrinsic merge quality (M5 spec §4.2): what the resolver wrongly
     merged — the counterweight to the redundancy metric. For each concept
     that accumulated >= 2 distinct casefolded mention surfaces across the
@@ -18,6 +19,8 @@ class Coherence(DocumentMetric):
     Ground truth is ignored — this metric is intrinsic (spec §7 explains
     why it does not join DocumentMetricContract). One batched embed call
     covers every distinct surface in the run."""
+
+    kind = "holistic"
 
     def __init__(self, embedder: Embedder):
         self.embedder = embedder

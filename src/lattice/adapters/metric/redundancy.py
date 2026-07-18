@@ -2,6 +2,7 @@ import re
 
 from lattice.core.types import GraphSnapshot
 from lattice.core.vectors import cosine
+from lattice.harness.stats.records import Resamplable
 from lattice.ports import Metric
 from lattice.registry.registry import register
 
@@ -19,12 +20,14 @@ def _normalize(label: str) -> str:
 
 
 @register(Metric, "redundancy")
-class Redundancy(Metric):
+class Redundancy(Metric, Resamplable):
     """Intrinsic near-duplicate detection over the accreted graph (M5 spec
     §4.1): what the resolver failed to merge. Two concepts are
     near-duplicates when their stored embeddings' cosine >= threshold or
     their normalized labels collide. O(n²) pairwise scan — fine at this
     scale (top-k selection bounds concepts to the low thousands)."""
+
+    kind = "holistic"
 
     def __init__(self, threshold: float = 0.9):
         self.threshold = threshold

@@ -1,4 +1,5 @@
 from lattice.core.types import GraphSnapshot
+from lattice.harness.stats.records import Resamplable
 from lattice.ports import Metric
 from lattice.registry.registry import register
 
@@ -97,10 +98,12 @@ def _is_shortcut(
 
 
 @register(Metric, "hierarchy-sanity")
-class HierarchySanity(Metric):
+class HierarchySanity(Metric, Resamplable):
     """Structural sanity of the induced IS_A hierarchy (M5 spec §4.3), in
     the spirit of TExEval-2's structural analysis: cycles, self-loops,
     depth, transitive shortcuts. No gold needed; all stdlib."""
+
+    kind = "holistic"
 
     def evaluate(
         self, snapshot: GraphSnapshot, ground_truth: dict[str, object]
