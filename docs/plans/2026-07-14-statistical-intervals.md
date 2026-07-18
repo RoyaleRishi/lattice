@@ -1210,6 +1210,17 @@ def test_write_report_is_json_and_sorted(tmp_path):
     assert path.name == "interval-report.json"
     loaded = json.loads(path.read_text())
     assert loaded["metrics"]["edge-f1"]["f1"]["estimate"] == 1.0
+
+
+def test_analyze_item_level_honors_fixed_prefix():
+    # Holding stream doc 0 (M4's glossary) fixed changes the recall CI but not the
+    # point estimate: without it, resamples can drop the glossary's compound edges,
+    # widening the interval. This fails if the item-level branch ignores fixed_prefix.
+    # Verified against the real engine: free bca=(0.4,1.0), held bca=(0.6,1.0).
+    free = analyze(CFG, samples=400, seed=0, fixed_prefix=0)["metrics"]["edge-f1"]["recall"]
+    held = analyze(CFG, samples=400, seed=0, fixed_prefix=1)["metrics"]["edge-f1"]["recall"]
+    assert free["estimate"] == held["estimate"] == 1.0     # point estimate unaffected
+    assert free["bca"] != held["bca"]                      # CI reflects the held glossary
 ```
 
 - [ ] **Step 2: Run test to verify it fails**
@@ -1225,14 +1236,19 @@ Expected: FAIL with `ModuleNotFoundError: No module named 'lattice.harness.stats
 it as regenerable JSON. Item-level metrics bootstrap from one pipeline run;
 holistic metrics re-run the pipeline per resample."""
 
-import dataclasses
 import json
 from collections.abc import Sequence
 from pathlib import Path
 
-from lattice.harness.runner import ExperimentConfig, run_experiment_detailed
-from lattice.harness.stats.intervals import Interval, bca_interval, percentile_interval
+from lattice.config.factory import instantiate
+from lattice.harness.runner import (
+    ExperimentConfig,
+    run_experiment_detailed,
+    run_on_documents,
+)
+from lattice.harness.stats.intervals import bca_interval, percentile_interval
 from lattice.harness.stats.resample import bootstrap, bootstrap_holistic, jackknife
+from lattice.ports import Dataset
 
 
 def _iv(estimate: float, resamples: list[float], jack: list[float], level: float) -> dict:
@@ -1253,9 +1269,6 @@ def analyze(
     if holistic:
         dists = bootstrap_holistic(config, samples=samples, seed=seed, fixed_prefix=fixed_prefix)
         # holistic point estimates: one clean run over the full stream
-        from lattice.harness.runner import run_on_documents
-        from lattice.config.factory import instantiate
-        from lattice.ports import Dataset
         documents = list(instantiate(Dataset, config.dataset).documents())
         estimates = run_on_documents(config, documents)
         for flat_key, resamples in dists.items():
@@ -1269,8 +1282,13 @@ def analyze(
     else:
         report_full, bundles = run_experiment_detailed(config)
         for name, bundle in bundles.items():
-            dists = bootstrap(bundle, samples=samples, seed=seed, fixed_doc_ids=fixed_doc_ids)
-            jacks = jackknife(bundle, fixed_doc_ids=fixed_doc_ids)
+            # Translate fixed_prefix -> fixed_doc_ids: hold the first `fixed_prefix`
+            # stream documents fixed (e.g. M4's glossary at stream position 0). The
+            # bundle's per_document preserves processing order, so its first keys are
+            # those documents. Explicit fixed_doc_ids, if given, take precedence.
+            fixed_ids = list(fixed_doc_ids) or list(bundle.per_document)[:fixed_prefix]
+            dists = bootstrap(bundle, samples=samples, seed=seed, fixed_doc_ids=fixed_ids)
+            jacks = jackknife(bundle, fixed_doc_ids=fixed_ids)
             for key, resamples in dists.items():
                 estimate = report_full.metrics[name][key]
                 metrics.setdefault(name, {})[key] = _iv(estimate, resamples, jacks[key], level)
@@ -1466,3 +1484,13 @@ plan's own text (not an implementer deviation).
    `configs/m3-ecbplus-sweep.toml` base. The two corpora give an independent read on whether
    the resolver comparison replicates — directly responsive to the credibility critique that
    started this track. `data/ecbplus` (206-line test split) is present; cost is bounded.
+9. **Task 10 `analyze()` item-level branch ignored `fixed_prefix` (Critical).** Only the
+   holistic branch translated `fixed_prefix`; the item-level branch bootstrapped with the
+   default empty `fixed_doc_ids`, so `--fixed-prefix 1` silently no-opped for M4 — resampling
+   the glossary and producing too-wide CIs. Fixed: the item-level branch now derives
+   `fixed_ids = list(fixed_doc_ids) or list(bundle.per_document)[:fixed_prefix]` (per_document
+   preserves stream order, so its first keys are the fixed docs). Added
+   `test_analyze_item_level_honors_fixed_prefix` (verified: point estimate unchanged at 1.0,
+   BCa CI moves from (0.4,1.0) to (0.6,1.0) when the glossary is held). The holistic branch's
+   mid-function imports were hoisted; unused `dataclasses`/`Interval` imports removed. The 6
+   M4 item-level reports generated before this fix must be regenerated.
