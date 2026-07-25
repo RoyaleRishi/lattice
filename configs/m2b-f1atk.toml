@@ -1,0 +1,43 @@
+# M2b (spec §11), collapsed single-config: embedding-cosine scorer (the M2b
+# sweep's own [base.scorer]) at top_k=15 — matching the sweep's axis param so
+# the f1-at-k invariant (scorer top_k >= max(ks)=15) holds — on the Inspec
+# test split. Collapsed from configs/m2b-sweep.toml's [base.*], for
+# item-level bootstrap CI via `python -m lattice.harness.stats` (Task 10/11).
+
+[segmenter]
+name = "sentence"
+
+[extractor]
+name = "noun-chunk"
+
+[scorer]
+name = "embedding-cosine"
+[scorer.params]
+top_k = 15
+
+[resolver]
+name = "exact-label"
+
+[relation_inducer]
+name = "co-occurrence"
+
+[graph_integrator]
+name = "in-memory"
+
+[embedder]
+name = "sentence-transformer"
+
+[concept_store]
+name = "in-memory"
+
+[run]
+on_error = "fail"
+seed = 0
+
+[dataset]
+name = "inspec"
+[dataset.params]
+split = "test"
+
+[[document_metrics]]
+name = "f1-at-k"

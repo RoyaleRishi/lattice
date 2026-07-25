@@ -1,0 +1,55 @@
+# M5 (spec §5), collapsed single-config: the pre-registered nn@0.90 operating
+# point (chosen on ConEL-2 for its redundancy/coherence tradeoff — not
+# b3-f1-optimal) on the full-real ConEL-2 pipeline. Collapsed from
+# configs/m5-conel2-sweep.toml's [base.*] + the threshold=0.90 axis option,
+# for holistic bootstrap CI via `python -m lattice.harness.stats --holistic`
+# (Task 10/11). All three metrics (redundancy, hierarchy-sanity, coherence)
+# are `kind = "holistic"` — no per-document bundle, the pipeline re-runs per
+# resample.
+
+[segmenter]
+name = "block"
+
+[extractor]
+name = "noun-chunk"
+
+[scorer]
+name = "embedding-cosine"
+
+[resolver]
+name = "embedding-nn"
+[resolver.params]
+threshold = 0.90
+
+[relation_inducer]
+name = "union"
+[relation_inducer.params]
+members = [{ name = "hearst" }, { name = "compound" }]
+
+[graph_integrator]
+name = "in-memory"
+
+[embedder]
+name = "sentence-transformer"
+
+[concept_store]
+name = "in-memory"
+
+[run]
+on_error = "fail"
+seed = 0
+
+[dataset]
+name = "mention-clusters"
+[dataset.params]
+root = "data/conel2"
+split = "test"
+
+[[metrics]]
+name = "redundancy"
+
+[[metrics]]
+name = "hierarchy-sanity"
+
+[[document_metrics]]
+name = "coherence"

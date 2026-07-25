@@ -1,0 +1,48 @@
+# M4 (spec §6), collapsed single-config: union (hearst + compound) IS_A
+# induction on TExEval-2 food. Collapsed from configs/m4-food-sweep.toml's
+# [base.*] + the union axis option, for item-level bootstrap CI via
+# `python -m lattice.harness.stats` (Task 10/11). Glossary-first dataset
+# ordering (src/lattice/adapters/dataset/taxonomy.py) — resample/permute with
+# --fixed-prefix 1 to hold the glossary document fixed.
+
+[segmenter]
+name = "block"
+
+[extractor]
+name = "gazetteer"
+[extractor.params]
+root = "data/texeval"
+gold = "food"
+
+[scorer]
+name = "passthrough"
+
+[resolver]
+name = "exact-label"
+
+[relation_inducer]
+name = "union"
+[relation_inducer.params]
+members = [{ name = "hearst" }, { name = "compound" }]
+
+[graph_integrator]
+name = "in-memory"
+
+[embedder]
+name = "hashing"
+
+[concept_store]
+name = "in-memory"
+
+[run]
+on_error = "fail"
+seed = 0
+
+[dataset]
+name = "taxonomy"
+[dataset.params]
+root = "data/texeval"
+gold = "food"
+
+[[metrics]]
+name = "edge-f1"

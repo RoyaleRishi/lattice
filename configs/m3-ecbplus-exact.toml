@@ -1,0 +1,46 @@
+# M3 (spec §6), collapsed single-config: exact-label resolver on ECB+ gold
+# mentions. Collapsed from configs/m3-ecbplus-sweep.toml's [base.*] + the
+# exact-label axis option, for item-level bootstrap CI via
+# `python -m lattice.harness.stats` (Task 10/11). ECB+ is an out-of-sample
+# replication check of the nn@0.90 operating point chosen on ConEL-2 in M5 —
+# the amendment 8 scope fix (task-11-brief-v2, Execution Amendments #8).
+
+[segmenter]
+name = "block"
+
+[extractor]
+name = "gold-mentions"
+[extractor.params]
+root = "data/ecbplus"
+split = "test"
+
+[scorer]
+name = "passthrough"
+
+[resolver]
+name = "exact-label"
+
+[relation_inducer]
+name = "co-occurrence"
+
+[graph_integrator]
+name = "in-memory"
+
+[embedder]
+name = "sentence-transformer"
+
+[concept_store]
+name = "in-memory"
+
+[run]
+on_error = "fail"
+seed = 0
+
+[dataset]
+name = "mention-clusters"
+[dataset.params]
+root = "data/ecbplus"
+split = "test"
+
+[[document_metrics]]
+name = "clustering"

@@ -1,0 +1,48 @@
+# M3 (spec §6), collapsed single-config: embedding-nn resolver at the SAME
+# pre-registered threshold=0.90 operating point used for ConEL-2 (not
+# re-tuned per corpus — see task-11-brief-v2 scope amendment) on ECB+ gold
+# mentions. Collapsed from configs/m3-ecbplus-sweep.toml's [base.*] + the
+# threshold=0.90 axis option, for item-level bootstrap CI via
+# `python -m lattice.harness.stats` (Task 10/11).
+
+[segmenter]
+name = "block"
+
+[extractor]
+name = "gold-mentions"
+[extractor.params]
+root = "data/ecbplus"
+split = "test"
+
+[scorer]
+name = "passthrough"
+
+[resolver]
+name = "embedding-nn"
+[resolver.params]
+threshold = 0.90
+
+[relation_inducer]
+name = "co-occurrence"
+
+[graph_integrator]
+name = "in-memory"
+
+[embedder]
+name = "sentence-transformer"
+
+[concept_store]
+name = "in-memory"
+
+[run]
+on_error = "fail"
+seed = 0
+
+[dataset]
+name = "mention-clusters"
+[dataset.params]
+root = "data/ecbplus"
+split = "test"
+
+[[document_metrics]]
+name = "clustering"
