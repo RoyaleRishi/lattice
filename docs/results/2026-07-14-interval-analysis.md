@@ -22,13 +22,16 @@ code, on 2026-07-18.
   default), because M5's metrics (`redundancy`, `hierarchy-sanity`,
   `coherence`) are `kind = "holistic"` — they judge the accreted graph as a
   whole, not per-document records.
-- **Intervals**: BCa (bias-corrected, accelerated) is reported where defined;
-  the plain percentile interval is always reported alongside. When BCa's
-  acceleration/bias terms are undefined at the boundary (every resample lies
-  on one side of the point estimate — see the ECB+ note in §2.2), `bca_interval`
-  falls back to the percentile interval and labels itself `"percentile-fallback"`
-  rather than emitting a nonsensical bound; this is existing, unit-tested Task 2
-  behavior, not a Task 11 change.
+- **Intervals**: BCa (bias-corrected, accelerated) is reported where it is
+  well-defined; the plain percentile interval is always available alongside.
+  `bca_interval` falls back to the percentile interval (labelled
+  `"percentile-fallback"`) in two degenerate regimes: (a) every resample lies on
+  one side of the point estimate (`prop ∈ {0,1}`, bias term undefined), and (b)
+  the computed BCa interval fails to bracket the point estimate (extreme
+  bias/acceleration collapsed it — see the §2.2 skewed-resample caveat). Both
+  guards are unit-tested (`tests/harness/stats/test_intervals.py`). Guard (b) was
+  added after the whole-branch review surfaced collapsed BCa intervals on skewed
+  cells; the affected M3/M4 reports were regenerated with it (2026-07-24).
 - **Paired delta**: `bootstrap()` run with the *same seed* on two configs'
   clustering bundles draws identical document indices at each iteration i
   (paired by construction, since both bundles share the same `per_document`
@@ -128,38 +131,34 @@ python -m lattice.harness.stats configs/m3-ecbplus-nn090.toml  reports/intervals
 
 | config | b3-precision | b3-recall | b3-f1 | ari |
 |---|---|---|---|---|
-| exact-label | 0.9978 [0.9918, 1.0000] | 0.8861 [0.8538, 0.8971] | 0.9386 [0.9204, 0.9442] | 0.7605 [0.7417, 0.7423] |
-| nn@0.90     | 0.9978 [0.9918, 1.0000] | 0.9050 [0.8636, 0.9167] | 0.9491 [0.9267, 0.9552] | 0.8036 [0.7556, 0.7825] |
+| exact-label | 0.9978 [0.9918, 1.0000] | 0.8861 [0.8538, 0.8971] | 0.9386 [0.9204, 0.9442] | 0.7605 [0.8022, 0.9303]† |
+| nn@0.90     | 0.9978 [0.9918, 1.0000] | 0.9050 [0.8636, 0.9167] | 0.9491 [0.9267, 0.9552] | 0.8036 [0.8278, 0.9468]† |
 
 **ECB+:**
 
 | config | b3-precision | b3-recall | b3-f1 | ari |
 |---|---|---|---|---|
-| exact-label | 0.8077 [0.8050, 0.8050]† | 0.4880 [0.4864, 0.4864]† | 0.6084 [0.6293, 0.6636]† | 0.3282 [0.3168, 0.3169]† |
-| nn@0.90     | 0.7842 [0.8028, 0.8399] | 0.5203 [0.5176, 0.5176]† | 0.6255 [0.6458, 0.6782] | 0.3780 [0.3565, 0.3684] |
+| exact-label | 0.8077 [0.8238, 0.8593]† | 0.4880 [0.5034, 0.5462]† | 0.6084 [0.6293, 0.6636]† | 0.3282 [0.3456, 0.4138]† |
+| nn@0.90     | 0.7842 [0.8028, 0.8399]† | 0.5203 [0.5339, 0.5751]† | 0.6255 [0.6458, 0.6782]† | 0.3780 [0.3903, 0.4563]† |
 
-† **ECB+ statistical caveat (real finding, not a bug):** on all four ECB+
-clustering metrics for `exact-label`, and on `b3-f1`/`b3-recall` for
-`nn@0.90`, every one of the 10000 bootstrap resamples falls on the *same*
-side of the real point estimate (i.e. `prop` in `bca_interval` is 0 or 1).
-`bca_interval`'s existing (Task 2) safety fallback correctly detects this
-undefined-acceleration case and reports the plain percentile interval instead
-(labelled `"percentile-fallback"` in the JSON), rather than emitting a
-degenerate or nonsensical BCa bound — so the reported interval above IS the
-percentile interval, not a broken BCa one. The practical upshot: **the point
-estimate on the real 206-document corpus sits entirely outside the range
-spanned by 10000 resamples of that same corpus.** This is a real property of
-bootstrap-over-documents on a mention-weighted, multiplicity-preserving
-pooled statistic (clustering's `_aggregate` re-indexes duplicated documents
-rather than collapsing them — spec-intended, see Execution Amendment #4) when
-the corpus is heterogeneous in mentions-per-document and per-document
-precision/recall: resampling with replacement shifts the relative weight of
-high-mention vs. low-mention documents, and B3's harmonic/ratio structure
-means that shift does not average out to the plug-in estimate. It is *not*
-observed on ConEL-2 (bca succeeds cleanly there), so it is likely
-specific to ECB+'s document-size heterogeneity, not a general defect in the
-bootstrap procedure. Treat the ECB+ intervals above as directionally
-informative but wider-than-ideal; do not over-index on their exact bounds.
+† **Skewed-resample caveat (a real property, handled uniformly).** The cells marked †
+report the **percentile** interval, not BCa. On these cells (nearly) every one of the
+10000 resamples falls on the *same side* of the full-corpus point estimate — the plug-in
+estimate sits outside the range its own resamples span. This is a real property of the
+mention-weighted, multiplicity-preserving pooled statistic (clustering's `_aggregate`
+re-indexes duplicated documents rather than collapsing them — spec-intended, Execution
+Amendment #4): resampling documents with replacement shifts the relative weight of
+high-mention vs. low-mention documents, and B³'s ratio structure means that shift does
+not average back to the plug-in value. It affects **all ECB+ clustering cells** *and* the
+**ConEL-2 `ari`** cells above (and M4 `food`/`food-wordnet` precision, §2.3) — so it is a
+property of skewed corpora, **not ECB+-specific**. In this regime BCa's bias/acceleration
+adjustment is undefined or degenerate — it can collapse to a zero-width or non-bracketing
+interval — so `bca_interval` detects the two degenerate cases (`prop ∈ {0,1}`, or a
+computed interval that fails to bracket the estimate) and falls back to the plain
+percentile interval, labelled `"percentile-fallback"` in the JSON. Read these bounds as
+*where the resamples concentrate*; they may not bracket the point estimate, so do not
+over-index on their exact values. **The §1 b3-f1 headline is unaffected** — the paired
+delta is computed on the resample-wise difference, not on these marginal intervals.
 
 ### 2.3 M4 — edge-f1 P/R/F1, per gold (union = hearst + compound)
 
@@ -179,8 +178,8 @@ done
 | gold | docs | gold edges | precision | recall | f1 |
 |---|---|---|---|---|---|
 | env-eurovoc     |  180 |  261 | 0.6375 [0.6329, 0.6456] | 0.1954 [0.1916, 0.1954] | 0.2991 [0.2941, 0.3000] |
-| food            | 1312 | 1587 | 0.6148 [0.6031, 0.6145] | 0.2193 [0.1953, 0.2060] | 0.3233 [0.2968, 0.3108] |
-| food-wordnet    | 1117 | 1533 | 0.6234 [0.6178, 0.6211] | 0.2818 [0.2603, 0.2707] | 0.3881 [0.3682, 0.3807] |
+| food            | 1312 | 1587 | 0.6148 [0.6154, 0.6397]† | 0.2193 [0.1953, 0.2060] | 0.3233 [0.2968, 0.3108] |
+| food-wordnet    | 1117 | 1533 | 0.6234 [0.6258, 0.6449]† | 0.2818 [0.2603, 0.2707] | 0.3881 [0.3682, 0.3807] |
 | science         |  302 |  465 | 0.6839 [0.6765, 0.6882] | 0.2559 [0.2516, 0.2559] | 0.3725 [0.3673, 0.3748] |
 | science-eurovoc |  120 |  124 | 0.6000 [0.5862, 0.6000] | 0.1452 [0.1371, 0.1452] | 0.2338 [0.2222, 0.2338] |
 | science-wordnet |  355 |  441 | 0.8056 [0.8019, 0.8113] | 0.1973 [0.1927, 0.1973] | 0.3169 [0.3119, 0.3181] |
@@ -211,7 +210,10 @@ sits at or above the *upper* edge of its recall/F1 CI — e.g. env-eurovoc recal
 with-replacement resampling drops ~37% of documents on average and their Hearst
 edges with them). This one-sidedness is intrinsic to edge-set pooling, not an
 artifact — it is the honest shape of corpus-composition uncertainty for a
-union-pooled metric.
+union-pooled metric. On the two largest golds it becomes extreme enough that the
+`food`/`food-wordnet` **precision** cells (marked †) have the point estimate fall
+just below their resample range, so BCa degenerates and they report the percentile
+interval — the same skewed-resample regime documented in the §2.2 caveat.
 
 ## 3. M3 threshold-sensitivity curve
 

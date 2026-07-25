@@ -62,7 +62,14 @@ def bca_interval(
     for z_a in (_N.inv_cdf(a), _N.inv_cdf(1 - a)):
         adj = z0 + (z0 + z_a) / (1 - acc * (z0 + z_a))
         bounds.append(_percentile(s, _N.cdf(adj)))
-    return Interval(bounds[0], bounds[1], "bca")
+    lo, hi = bounds
+    if lo > estimate or hi < estimate:
+        # Extreme bias/acceleration on a heavily skewed resample distribution can
+        # collapse the BCa interval to a range that does not bracket the point
+        # estimate — a degenerate, misleading "CI". Fall back to the plain
+        # percentile interval, which honestly reflects where the resamples lie.
+        return Interval(_percentile(s, a), _percentile(s, 1 - a), "percentile-fallback")
+    return Interval(lo, hi, "bca")
 
 
 def paired_delta(

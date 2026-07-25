@@ -33,6 +33,17 @@ def test_bca_falls_back_when_estimate_outside_resamples():
     assert iv.method == "percentile-fallback"
 
 
+def test_bca_falls_back_when_interval_would_not_bracket_estimate():
+    # Heavily right-skewed resamples with the estimate near the 1st percentile drive
+    # BCa's bias/acceleration adjustment to collapse the interval below the estimate
+    # (raw BCa here is ~[0.0, 3.37], which does not bracket 5.0). The guard must fall
+    # back to the percentile interval rather than report a non-bracketing "CI".
+    resamples = [0.0] + [10.0] * 99
+    iv = bca_interval(5.0, resamples, [1.0, 1.0, 1.0, 2.0])
+    assert iv.method == "percentile-fallback"
+    assert (iv.lo, iv.hi) == (10.0, 10.0)
+
+
 def test_paired_delta_sign_and_probability():
     d = paired_delta([1.0, 2.0, 3.0], [2.0, 3.0, 4.0], 2.0, 3.0)
     assert d.estimate == -1.0
