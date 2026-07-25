@@ -31,7 +31,7 @@ code, on 2026-07-18.
   bias/acceleration collapsed it — see the §2.2 skewed-resample caveat). Both
   guards are unit-tested (`tests/harness/stats/test_intervals.py`). Guard (b) was
   added after the whole-branch review surfaced collapsed BCa intervals on skewed
-  cells; the affected M3/M4 reports were regenerated with it (2026-07-24).
+  cells; the affected M3/M4 reports were regenerated with it (2026-07-25).
 - **Paired delta**: `bootstrap()` run with the *same seed* on two configs'
   clustering bundles draws identical document indices at each iteration i
   (paired by construction, since both bundles share the same `per_document`
@@ -150,7 +150,7 @@ re-indexes duplicated documents rather than collapsing them — spec-intended, E
 Amendment #4): resampling documents with replacement shifts the relative weight of
 high-mention vs. low-mention documents, and B³'s ratio structure means that shift does
 not average back to the plug-in value. It affects **all ECB+ clustering cells** *and* the
-**ConEL-2 `ari`** cells above (and M4 `food`/`food-wordnet` precision, §2.3) — so it is a
+**ConEL-2 `ari`** cells above (and all M4 `food`/`food-wordnet` P/R/F1 cells, §2.3) — so it is a
 property of skewed corpora, **not ECB+-specific**. In this regime BCa's bias/acceleration
 adjustment is undefined or degenerate — it can collapse to a zero-width or non-bracketing
 interval — so `bca_interval` detects the two degenerate cases (`prop ∈ {0,1}`, or a
@@ -178,8 +178,8 @@ done
 | gold | docs | gold edges | precision | recall | f1 |
 |---|---|---|---|---|---|
 | env-eurovoc     |  180 |  261 | 0.6375 [0.6329, 0.6456] | 0.1954 [0.1916, 0.1954] | 0.2991 [0.2941, 0.3000] |
-| food            | 1312 | 1587 | 0.6148 [0.6154, 0.6397]† | 0.2193 [0.1953, 0.2060] | 0.3233 [0.2968, 0.3108] |
-| food-wordnet    | 1117 | 1533 | 0.6234 [0.6258, 0.6449]† | 0.2818 [0.2603, 0.2707] | 0.3881 [0.3682, 0.3807] |
+| food            | 1312 | 1587 | 0.6148 [0.6154, 0.6397]† | 0.2193 [0.1953, 0.2060]† | 0.3233 [0.2968, 0.3108]† |
+| food-wordnet    | 1117 | 1533 | 0.6234 [0.6258, 0.6449]† | 0.2818 [0.2603, 0.2707]† | 0.3881 [0.3682, 0.3807]† |
 | science         |  302 |  465 | 0.6839 [0.6765, 0.6882] | 0.2559 [0.2516, 0.2559] | 0.3725 [0.3673, 0.3748] |
 | science-eurovoc |  120 |  124 | 0.6000 [0.5862, 0.6000] | 0.1452 [0.1371, 0.1452] | 0.2338 [0.2222, 0.2338] |
 | science-wordnet |  355 |  441 | 0.8056 [0.8019, 0.8113] | 0.1973 [0.1927, 0.1973] | 0.3169 [0.3119, 0.3181] |
@@ -210,10 +210,12 @@ sits at or above the *upper* edge of its recall/F1 CI — e.g. env-eurovoc recal
 with-replacement resampling drops ~37% of documents on average and their Hearst
 edges with them). This one-sidedness is intrinsic to edge-set pooling, not an
 artifact — it is the honest shape of corpus-composition uncertainty for a
-union-pooled metric. On the two largest golds it becomes extreme enough that the
-`food`/`food-wordnet` **precision** cells (marked †) have the point estimate fall
-just below their resample range, so BCa degenerates and they report the percentile
-interval — the same skewed-resample regime documented in the §2.2 caveat.
+union-pooled metric. On the two largest golds this drift becomes extreme enough that
+**all three (P/R/F1)** `food`/`food-wordnet` cells (marked †) have the point estimate
+fall entirely outside their resample range — precision just *below* it (dropping
+documents raises the kept-edge precision ratio), recall and F1 *above* it (the
+one-sidedness just described) — so BCa degenerates and all six cells report the
+percentile interval, the same skewed-resample regime documented in the §2.2 caveat.
 
 ## 3. M3 threshold-sensitivity curve
 

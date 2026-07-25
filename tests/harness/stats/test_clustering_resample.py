@@ -1,7 +1,9 @@
 import pytest
 
 from lattice.adapters.document_metric.clustering import ClusteringMetric
+from lattice.core.types import GraphSnapshot
 from lattice.harness.runner import ExperimentConfig, run_experiment_detailed
+from lattice.harness.stats.records import EvaluationContext
 
 CFG = ExperimentConfig.model_validate({
     "segmenter": {"name": "block"},
@@ -29,6 +31,17 @@ def test_clustering_equivalence():
     doc_ids = list(bundle.per_document)
     records = [bundle.per_document[d] for d in doc_ids]
     assert bundle.aggregate(records, bundle.global_context) == report.metrics["clustering"]
+
+
+def test_emit_records_rejects_missing_ground_truth_key():
+    # emit_records must guard its ground_truth["clusters_by_mention"] lookup the
+    # same way evaluate_documents does — a bare subscript would raise an opaque
+    # KeyError deep in the loop instead of this clear contract error.
+    ctx = EvaluationContext(
+        deltas=(), snapshot=GraphSnapshot(concepts=(), relations=()), ground_truth={}
+    )
+    with pytest.raises(ValueError, match="clusters_by_mention"):
+        ClusteringMetric().emit_records(ctx)
 
 
 def test_clustering_aggregate_respects_multiplicity():

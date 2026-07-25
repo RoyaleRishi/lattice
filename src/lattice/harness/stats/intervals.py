@@ -76,6 +76,11 @@ def paired_delta(
     resamples_a: list[float], resamples_b: list[float],
     estimate_a: float, estimate_b: float, level: float = 0.95,
 ) -> DeltaResult:
+    if len(resamples_a) != len(resamples_b):
+        raise ValueError(
+            "paired_delta requires equal-length resample lists "
+            f"(got {len(resamples_a)} and {len(resamples_b)})"
+        )
     deltas = [x - y for x, y in zip(resamples_a, resamples_b)]
     iv = percentile_interval(estimate_a - estimate_b, deltas, level)
     prob = sum(1 for d in deltas if d > 0) / len(deltas)

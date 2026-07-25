@@ -1,3 +1,5 @@
+import pytest
+
 from lattice.harness.stats.intervals import (
     bca_interval,
     paired_delta,
@@ -49,3 +51,10 @@ def test_paired_delta_sign_and_probability():
     assert d.estimate == -1.0
     assert d.prob_positive == 0.0
     assert d.lo == -1.0 and d.hi == -1.0
+
+
+def test_paired_delta_rejects_unequal_length():
+    # zip() would silently truncate to the shorter list and pair the wrong
+    # iterations; the guard must reject instead of computing a bogus delta.
+    with pytest.raises(ValueError, match="equal-length"):
+        paired_delta([1.0, 2.0, 3.0], [2.0, 3.0], 2.0, 3.0)
