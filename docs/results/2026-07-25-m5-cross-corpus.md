@@ -14,10 +14,11 @@ of ConEL-2.** Across three corpora spanning three genres — conversational
 entity-linking, task-oriented dialogue, and news — the coherence-vs-threshold
 curve is nearly identical (§2), and at the pre-registered `nn@0.90` operating
 point the intrinsic metrics land in the same neighbourhood with tight,
-overlapping CIs (§3). One honest exception: MultiWOZ's induced IS_A graph carries
-minor hierarchy-sanity violations that ConEL-2 and ECB+ do not (§4) — a
-corpus-specific wrinkle in the *hierarchy* family, not in the redundancy↔coherence
-tension that Track 2 set out to test.
+overlapping CIs (§3). One honest exception: MultiWOZ's induced IS_A graph is the
+only one that is not acyclic — it carries a small cycle that neither ConEL-2 nor
+ECB+ exhibits, plus more transitive shortcuts (§4) — a corpus-specific wrinkle in
+the *hierarchy* family, not in the redundancy↔coherence tension that Track 2 set
+out to test.
 
 ## 2. Tradeoff shape across the 4-point resolver axis
 
@@ -98,16 +99,20 @@ coherence but more redundancy — reproduces out-of-sample without re-tuning
 (`nn@0.90` was fixed on ConEL-2 and applied as-is). The single-corpus M5 result
 was not a ConEL-2 artifact.
 
-**Hierarchy-sanity: mostly clean, but MultiWOZ is the exception.** ConEL-2 and
-ECB+ induce clean IS_A forests — zero cycles, self-loops, and transitive
-shortcuts. MultiWOZ does not: its point estimates show one cycle component (2
-nodes) and 5 transitive shortcuts (CIs `[0,1]`/`[0,2]`/`[0,4]` — small and
-resample-fragile, but the full-corpus graph is not shortcut-free). The likely
-cause is task-dialogue compound phrasing (e.g. "cheap hotel" IS_A "hotel"
-alongside "hotel" IS_A "place to stay") producing short redundant chains and the
-occasional 2-cycle. This is a real corpus difference, confined to the *hierarchy*
-family; it does not touch the redundancy↔coherence finding, but it means the
-"clean forest" claim from M5 is ConEL-2/ECB+-specific, not universal.
+**Hierarchy-sanity: ConEL-2 is fully clean; the others less so.** ConEL-2 induces
+a spotless IS_A forest — zero cycles, self-loops, and transitive shortcuts. ECB+
+is close: acyclic and self-loop-free, with a single transitive shortcut
+(`transitive-shortcuts = 1 [0,1]`). MultiWOZ is the real outlier and the only
+*non-acyclic* graph: one cycle component (2 nodes; `cycle-components = 1 [0,1]`,
+`cycle-nodes = 2 [0,2]`) and 5 transitive shortcuts (`[0,4]` — small and
+resample-fragile, but the full-corpus graph carries them). The likely cause is
+task-dialogue compound phrasing (e.g. "cheap hotel" IS_A "hotel" alongside
+"hotel" IS_A "place to stay") producing short redundant chains and the occasional
+2-cycle. This is a real corpus difference, confined to the *hierarchy* family; it
+does not touch the redundancy↔coherence finding. Two distinctions matter:
+**acyclicity** holds on ConEL-2 and ECB+ but fails only on MultiWOZ, while
+**shortcut-freeness** holds only on ConEL-2 (ECB+ has one, MultiWOZ five). The
+perfectly-clean forest is thus ConEL-2-specific, not universal.
 
 **Bottom line.** Track 2's question — is the redundancy/coherence tradeoff a
 method property or a ConEL-2 artifact? — answers **method property**, on two
