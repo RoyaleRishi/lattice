@@ -39,5 +39,6 @@ from lattice.adapters.scorer import (  # noqa: F401
     hcuke,
     mderank,
     passthrough,
+    promptrank,
 )
 from lattice.adapters.segmenter import block, sentence  # noqa: F401
