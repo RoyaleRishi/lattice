@@ -15,6 +15,14 @@ def main() -> None:
     )
     print(f"sentence-transformer ready: dim={get_dim()}")
 
+    # PromptRank baseline (credibility Track 3): cache t5-base via the fast
+    # tokenizer (no sentencepiece dependency; pyproject frozen).
+    from transformers import AutoTokenizer, T5ForConditionalGeneration
+
+    AutoTokenizer.from_pretrained("t5-base")
+    T5ForConditionalGeneration.from_pretrained("t5-base")
+    print("t5-base ready (PromptRank)")
+
 
 if __name__ == "__main__":
     main()

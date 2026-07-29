@@ -1,0 +1,42 @@
+# PromptRank single-config (credibility Track 3): collapsed from
+# configs/m2-promptrank-sweep.toml's [base.*], scorer=promptrank at top_k=15
+# (f1-at-k invariant: scorer top_k >= max(ks)=15), on the Inspec test split.
+# For item-level bootstrap CI via `python -m lattice.harness.stats`.
+
+[segmenter]
+name = "sentence"
+
+[extractor]
+name = "noun-chunk"
+
+[scorer]
+name = "promptrank"
+[scorer.params]
+top_k = 15
+
+[resolver]
+name = "exact-label"
+
+[relation_inducer]
+name = "co-occurrence"
+
+[graph_integrator]
+name = "in-memory"
+
+[embedder]
+name = "sentence-transformer"
+
+[concept_store]
+name = "in-memory"
+
+[run]
+on_error = "fail"
+seed = 0
+
+[dataset]
+name = "inspec"
+[dataset.params]
+split = "test"
+
+[[document_metrics]]
+name = "f1-at-k"
