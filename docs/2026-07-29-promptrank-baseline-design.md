@@ -103,9 +103,10 @@ worked example before commit (standing "machine-verify plan code" constraint).
 - **Model:** `t5-base` — matches the paper.
 - **Candidates:** from the injected `noun-chunk` `Extractor` (paper: a POS-regex
   NP chunker) — the same documented deviation MDERank and HCUKE already carry.
-- **Document text:** units joined by `"\n"`; Inspec abstracts (~122 words) fit
-  T5's 512-token window, so no truncation handling (mirrors MDERank's MiniLM
-  window note).
+- **Document text:** units joined on whitespace (a single space, matching
+  PromptRank's space-joined document); Inspec abstracts (~122 words) fit T5's
+  512-token window, so no truncation handling (mirrors MDERank's MiniLM window
+  note).
 - **Determinism:** inference-only teacher-forced likelihood — no sampling and no
   free generation — the "local deterministic seq2seq" characterization the
   architecture spec used.
