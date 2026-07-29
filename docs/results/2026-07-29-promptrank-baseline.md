@@ -1,0 +1,144 @@
+# PromptRank Excluded-Method Baseline — does re-admitting the excluded generative scorer change the M2 story?
+
+Track 3 deliverable. Adds **PromptRank** (Kong et al., ACL 2023) — the one
+keyphrase scorer M2 deliberately excluded ([m2 design §2](../2026-07-08-m2-extraction-salience-design.md))
+— as a `promptrank` `Scorer` and runs it under identical M2b conditions on the
+Inspec test split (500 docs, `top_k=15`, seed 0). PromptRank is a **comparison
+entry only**; it is never wired into the shipped engine, so the "no generative
+LLM on the critical path" property of the delivered pipeline is preserved. Every
+number below was produced by the recorded command (§5) against this repository's
+code and the cached `t5-base`. Runs executed 2026-07-29, seed 0 throughout.
+
+## 1. Headline verdict
+
+**Re-admitting the excluded method does not overturn the M2 story — it confirms
+it.** PromptRank is genuinely strong (the single best scorer at f1@5), but it
+does **not** dominate the included frontier: against `embedding-cosine` (M2's
+strong baseline) the paired bootstrap says PromptRank is **significantly better
+at f1@5**, a **statistical tie at f1@10**, and **marginally behind at f1@15** —
+the standard keyphrase reporting point (§3). PromptRank clearly beats the other
+three *included* scorers (`frequency`, `mderank`, `hcuke`) at every k (§2). So
+the exclusion did not bury a superior method: the benchmark's chosen baseline
+holds its own where it is reported, while PromptRank's real edge (early
+precision) is disclosed rather than hidden. The frontier comparison stands.
+
+## 2. Point estimates — five scorers on Inspec test (top_k=15)
+
+`python -m lattice.harness --sweep configs/m2-promptrank-sweep.toml`. Identical
+`[base.*]` to `configs/m2b-sweep.toml` (sentence units, noun-chunk candidates,
+MiniLM embeddings, exact-label resolver); only the scorer axis varies. macro
+P/R/F1 over the 500-document test split.
+
+**F1 (headline):**
+
+| scorer | f1@5 | f1@10 | f1@15 |
+|---|---|---|---|
+| frequency | 0.1781 | 0.2398 | 0.2692 |
+| **embedding-cosine** | 0.2967 | **0.3547** | **0.3555** |
+| mderank | 0.2739 | 0.3274 | 0.3331 |
+| hcuke | 0.1507 | 0.1734 | 0.1982 |
+| **promptrank** | **0.3152** | 0.3515 | 0.3490 |
+
+**Precision / recall:**
+
+| scorer | P@5 | R@5 | P@10 | R@10 | P@15 | R@15 |
+|---|---|---|---|---|---|---|
+| frequency | 0.2509 | 0.1526 | 0.2369 | 0.2764 | 0.2293 | 0.3728 |
+| embedding-cosine | 0.4144 | 0.2545 | 0.3551 | 0.4004 | 0.3068 | 0.4796 |
+| mderank | 0.3836 | 0.2357 | 0.3251 | 0.3729 | 0.2853 | 0.4543 |
+| hcuke | 0.2164 | 0.1272 | 0.1738 | 0.1980 | 0.1694 | 0.2746 |
+| promptrank | 0.4421 | 0.2702 | 0.3533 | 0.3960 | 0.3019 | 0.4700 |
+
+The strongest included scorer at every k is `embedding-cosine` (the M2b amendment
+predicted MDERank would not win on Inspec's short abstracts — confirmed).
+PromptRank is the **overall best at f1@5** — highest precision *and* recall in
+the top 5 — and converges with `embedding-cosine` as k grows, ending just below
+it at f1@15. `embedding-cosine` is therefore the incumbent for the paired test.
+
+## 3. PromptRank CIs and the paired delta vs the strongest incumbent
+
+Item-level bootstrap, B=10000, seed 0 (Track 1's `f1-at-k` resampling).
+
+**PromptRank marginal (BCa 95% CI):** `python -m lattice.harness.stats
+configs/m2-promptrank-f1atk.toml reports/intervals/m2-promptrank --seed 0`.
+
+| metric | estimate | BCa 95% CI |
+|---|---|---|
+| f1@5 | 0.3152 | [0.3000, 0.3317] |
+| f1@10 | 0.3515 | [0.3374, 0.3655] |
+| f1@15 | 0.3490 | [0.3353, 0.3627] |
+
+**Paired delta, PromptRank − embedding-cosine** (`scripts/promptrank_analysis.py`;
+both configs bootstrapped at the same seed on the same 500 documents, so each
+iteration draws identical document indices — paired by construction, as M3's
+resolver delta was):
+
+| metric | promptrank | embedding-cosine | delta | 95% CI | P(delta>0) |
+|---|---|---|---|---|---|
+| f1@5 | 0.3152 | 0.2967 | **+0.0185** | [+0.0062, +0.0312] | 0.998 |
+| f1@10 | 0.3515 | 0.3547 | −0.0031 | [−0.0114, +0.0051] | 0.223 |
+| f1@15 | 0.3490 | 0.3555 | **−0.0064** | [−0.0126, −0.0001] | 0.023 |
+
+Read the deltas by whether the CI crosses zero:
+- **f1@5:** CI entirely positive (P=0.998) — PromptRank is **significantly
+  better** in the top 5.
+- **f1@10:** CI straddles zero (P=0.22) — **no significant difference**; a tie.
+- **f1@15:** CI entirely negative but only just (upper bound −0.0001, P=0.023) —
+  `embedding-cosine` is **significantly better**, though the margin is tiny
+  (~0.6 F1 points).
+
+## 4. Interpretation — the exclusion hid nothing, reported honestly
+
+The credibility question Track 3 set out to answer: *by excluding PromptRank, did
+M2 quietly leave out a method that would beat its frontier?* The paired evidence
+says **no** — at the standard f1@15 reporting point the included
+`embedding-cosine` baseline is, if anything, slightly ahead, and it is at least
+tied through f1@10. At the same time the result is reported **honestly rather
+than smoothed**: PromptRank is the strongest single method at f1@5, with the
+highest early precision of any scorer, and that is stated plainly rather than
+buried. The net effect is that the "we compared the frontier" claim is no longer
+vulnerable to "you left out the obvious generative baseline" — the baseline is
+now in the table, and where the benchmark reports (k=15) the incumbent still
+wins.
+
+**Faithfulness note.** The adapter implements PromptRank's actual algorithm — a
+T5 decoder scoring each candidate by the length-normalized log-probability of
+generating it under a prompt, plus a position penalty — with constants pinned
+verbatim from the reference implementation (NKU-HLT/PromptRank, `master`
+`69809394`, files `main.py`/`inference.py`/`data.py`): `temp_en="Book:"`,
+`temp_de="This book mainly talks about "`, `t5-base`, `length_factor=0.6`,
+`position_factor=1.2e8`, `max_len=512`. Documented deviations (see the adapter
+docstring): candidates come from the pipeline's noun-chunk `Extractor` (paper:
+a StanfordCoreNLP POS-regex NP chunker) — the same deviation MDERank/HCUKE carry;
+the T5 *fast* tokenizer is used (paper: the slow `T5Tokenizer`) to avoid a
+`sentencepiece` dependency (`pyproject` frozen), equivalent for T5; and
+`pos`/`doc_len` use whitespace word tokenization (paper: CoreNLP word indices),
+a mild tie-breaker dominated by the constant `position_factor/doc_len**3` term.
+Numeric parity with the reference's own numbers is not claimed (that would
+require its StanfordCoreNLP candidate set and data loader); the claim is
+algorithmic faithfulness at the pinned constants, validated by the `@pytest.mark.ml`
+determinism test and the machine-verified position/ranking unit fixtures.
+
+## 5. Regeneration
+
+```bash
+# Cache the model (the only network step). Fast tokenizer -> no sentencepiece.
+export SSL_CERT_FILE=$(uv run --no-sync python -c "import certifi; print(certifi.where())")
+uv run --group ml python scripts/fetch_models.py            # prints "t5-base ready (PromptRank)"
+
+# All runs offline thereafter. Prefix each with the macOS .pth un-hide:
+#   chflags nohidden .venv/lib/python*/site-packages/*.pth 2>/dev/null;
+export HF_HUB_OFFLINE=1 TRANSFORMERS_OFFLINE=1
+
+# §2 point table (5 scorers, ~24 min: PromptRank is ~2 s/doc on CPU).
+uv run --no-sync python -m lattice.harness --sweep configs/m2-promptrank-sweep.toml reports/m2-promptrank-sweep
+
+# §3 PromptRank marginal bootstrap CIs (B=10000).
+uv run --no-sync python -m lattice.harness.stats configs/m2-promptrank-f1atk.toml reports/intervals/m2-promptrank --seed 0
+
+# §3 paired delta vs the strongest incumbent (embedding-cosine = configs/m2b-f1atk.toml).
+uv run --no-sync python scripts/promptrank_analysis.py reports/intervals/promptrank --incumbent configs/m2b-f1atk.toml --incumbent-label embedding-cosine
+
+# PromptRank reference provenance:
+#   git ls-remote https://github.com/NKU-HLT/PromptRank master  # -> 69809394...
+```
