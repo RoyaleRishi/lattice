@@ -85,4 +85,5 @@ def test_real_t5_backend_is_finite_and_deterministic():
     b = PromptRankScorer(top_k=2).score(mentions, [unit])
     assert {sm.mention.span for sm in a} == {m.span for m in mentions}  # every mention scored
     assert all(math.isfinite(sm.salience) for sm in a)
-    assert [round(sm.salience, 4) for sm in a] == [round(sm.salience, 4) for sm in b]  # deterministic
+    # deterministic across two fresh model loads
+    assert [round(sm.salience, 4) for sm in a] == [round(sm.salience, 4) for sm in b]
