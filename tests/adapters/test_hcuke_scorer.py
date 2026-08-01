@@ -80,6 +80,56 @@ class TestHCUKEScorer(ScorerContract):
         assert salience["gamma"] == pytest.approx(0.0, abs=1e-12)
         assert salience["alpha"] > salience["beta"] > salience["gamma"]
 
+    def test_local_significance_alone_decides_when_it_opposes_position(self):
+        # Normalizing R_l is the whole of the Eq. (7) fix, so it needs a case
+        # where R_l is the ONLY factor that can decide the ranking. Here R_g is
+        # equal across candidates by construction, and centrality is set to run
+        # in the exact opposite direction to the position weight -- so if R_l
+        # were dropped from the product, the ranking would strictly reverse.
+        #
+        # One sentence "aaa bbb ccc", so H_d = H_s0 (same string) and W(s0) = 1.
+        #   H_s0 = (1,1,0); H_aaa = (1,0,0); H_bbb = (0,1,0); H_ccc = (1,2,2).
+        # R_g: cos(H_s0,H_d) = 1, and cos(H_c,H_s0) = 1/sqrt(2) for ALL three --
+        #   aaa: 1/(1*sqrt2), bbb: 1/(1*sqrt2), ccc: (1+2)/(3*sqrt2) = 1/sqrt2.
+        #   So R_g = 0.707107 for each; equal, hence min-max's degenerate case
+        #   -> 1.0 for each, i.e. R_g is inert and cannot break the tie.
+        # R_l: pair sims are (aaa,bbb) = 0, (aaa,ccc) = 1/3, (bbb,ccc) = 2/3,
+        #   with a unit diagonal, so the row totals are
+        #   aaa 1+0+1/3 = 4/3, bbb 1+0+2/3 = 5/3, ccc 1+1/3+2/3 = 2.
+        #   min-max over (4/3, 5/3, 2): span 2/3, so
+        #   aaa (4/3-4/3)/(2/3) = 0, bbb (1/3)/(2/3) = 0.5, ccc (2/3)/(2/3) = 1.
+        # W(c): positions aaa 1, bbb 2, ccc 3 -> raw softmax(1, 1/2, 1/3) =
+        #   (0.471710, 0.286106, 0.242184) -- ordered aaa > bbb > ccc, i.e. the
+        #   REVERSE of the centrality ordering. This is the discriminating part.
+        # Final: aaa = 1 * 0   * 0.471710 = 0.0
+        #        bbb = 1 * 0.5 * 0.286106 = 0.143053
+        #        ccc = 1 * 1   * 0.242184 = 0.242184
+        #   -> ccc > bbb > aaa. Delete norm_local from the Eq. (7) product and
+        #   this becomes aaa > bbb > ccc, so the test fails: exactly the
+        #   regression it exists to catch.
+        unit = make_unit(id="d:u0", document_id="d", text="aaa bbb ccc", order=0)
+        mentions = [
+            make_mention(surface="aaa", unit_id="d:u0", span=(0, 3)),
+            make_mention(surface="bbb", unit_id="d:u0", span=(4, 7)),
+            make_mention(surface="ccc", unit_id="d:u0", span=(8, 11)),
+        ]
+        embedder = LookupEmbedder(
+            {
+                "aaa bbb ccc": (1.0, 1.0, 0.0),
+                "aaa": (1.0, 0.0, 0.0),
+                "bbb": (0.0, 1.0, 0.0),
+                "ccc": (1.0, 2.0, 2.0),
+            },
+            default=(1.0, 1.0, 0.0),
+        )
+        scorer = HCUKEScorer(embedder=embedder, denoise_lambda=1.3)
+        salience = {sm.mention.surface: sm.salience for sm in scorer.score(mentions, [unit])}
+        assert salience["ccc"] == pytest.approx(0.242184, abs=1e-6)
+        assert salience["bbb"] == pytest.approx(0.143053, abs=1e-6)
+        assert salience["aaa"] == pytest.approx(0.0, abs=1e-12)
+        # Centrality beats position: the strict reverse of the W(c) ordering.
+        assert salience["ccc"] > salience["bbb"] > salience["aaa"]
+
     def test_every_salience_is_non_negative(self):
         # The invariant the added normalization buys, and the one that broke:
         # un-normalized R_l sums n terms each shifted by -lambda*mu, so with the

@@ -50,10 +50,11 @@ class HCUKEScorer(Scorer):
       dist(H_ci, H_cj) as §3.4 defines it: the mean over all n^2 ORDERED
       pairs, unit diagonal included. Algorithm 1 line 15's inner loop has no
       guard excluding j=i, so the self-comparison (cos(H_ci,H_ci)=1) is
-      included by design -- a constant per candidate that, because the final
-      score is a product (Eq. 7), contributes a term proportional to that
-      candidate's own global significance and position weight rather than
-      cancelling out.
+      included by design. It cannot however affect the output: every row
+      carries exactly one self term, so it is the same constant for every
+      candidate, and min-max is translation-invariant -- it cancels, exactly,
+      like the -lambda*mu offset below. It is kept for fidelity to Algorithm 1
+      and to keep the Eq. (6) trace readable, not because it ranks anything.
     - Normalization (not in the paper; see the deviations below): R_g and R_l
       are min-max normalized to [0, 1] across the document's candidates before
       Eq. (7) multiplies them, so that neither can be negative and neither
@@ -78,9 +79,10 @@ class HCUKEScorer(Scorer):
     is the phrase "simple filtering and normalization operations" (a contrast
     with prior work's "complex filtering techniques"), and neither §3.4 nor
     Algorithm 1 says what is normalized or how -- Algorithm 1 line 19 forms
-    the Eq. (7) product from the raw R_g, R_l and W_c. Min-max on the two
-    unbounded factors is our reading, forced less by the text than by Eq. (7)
-    being a product: Eq. (6) subtracts lambda*mu n times, so raw R_l is
+    the Eq. (7) product from the raw R_g, R_l and W_c. So min-max on the two
+    unbounded factors is our engineering decision, not an interpretation of
+    the paper -- the text does not speak to it at all. What forces it is that
+    Eq. (7) is a product: Eq. (6) subtracts lambda*mu n times, so raw R_l is
     negative for most candidates at the paper's lambda=1.3, and a negative
     factor in a product ranks the least central candidates first. One
     consequence of normalizing R_l in particular is exact, not
@@ -147,6 +149,10 @@ class HCUKEScorer(Scorer):
             for s in surfaces
         }
         # mu (§3.4) is the mean over all n^2 ordered pairs, diagonal included.
+        # The denominator is a fidelity trace, not a lever: n*lambda*mu is the
+        # same for every candidate, so min-max cancels it and n^2, n^2-n and
+        # n(n-1)/2 all produce bit-identical normalized R_l. Same reason the
+        # self-pair and denoise_lambda cannot move a score -- see the docstring.
         mu = sum(row_total.values()) / len(surfaces) ** 2
         # Eq. (6): R_l(c_i) = sum_j (dist(H_ci, H_cj) - lambda*mu) = the row
         # total less n identical offsets.
