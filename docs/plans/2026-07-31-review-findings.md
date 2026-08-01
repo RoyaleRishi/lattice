@@ -714,6 +714,69 @@ holds; the with-replacement paired path is bit-identical for a fixed seed.
 
 **Do not** regenerate reports here — Task 12 owns that.
 
+## Task 10c — Fix the subsampling rescale factor (publication blocker)
+
+**Added during execution. This is a defect in this plan's own Task 10
+prescription, not in either implementation.**
+
+Task 10's brief specified `tau = sqrt(m / n)`. That is the factor for
+subsampling in the `b/n → 0` asymptotic regime. This project draws
+**without replacement at m = round(n/2)**, where the overlap between the
+subsample and the full sample is half the corpus, and the finite-population
+term cannot be dropped:
+
+```
+Var(theta_m - theta_n) = sigma^2/m - sigma^2/n = (sigma^2/n) * (n - m)/m
+Var(theta_n - theta)   = sigma^2/n
+ratio                  = m / (n - m)
+```
+
+so the correct factor is `sqrt(m / (n - m))`, which at `m = n/2` is **1.0** —
+the raw percentile band about the estimate is already the right width, and
+`sqrt(m/n) = 0.707` shrinks it 29% past it.
+
+**Measured**, independently by the Task 10b reviewer and again by the
+controller, on the mean of iid normals (exactly √n-consistent, symmetric,
+no size dependence — so the factor is the only thing under test),
+3000 trials, B=400, nominal 95%:
+
+| n | m | `sqrt(m/n)` coverage | `sqrt(m/(n-m))` coverage |
+|---|---|---|---|
+| 58 | 29 | 0.823 | 0.939 |
+| 206 | 103 | 0.839 | 0.951 |
+| 500 | 250 | 0.834 | 0.948 |
+
+Every published pooled interval is therefore ~29% too narrow and covers
+~83%, not 95%. This blocks Tasks 12 and 14: nothing may be labelled a 95%
+CI until it is fixed.
+
+**Required changes:**
+
+1. In `subsample_interval` (`src/lattice/harness/stats/intervals.py`),
+   change the factor to `sqrt(m / (n - m))`.
+2. Guard `n - m <= 0`. `subsample_size` floors `m` at 2, so `n == 2` gives
+   `m == n` and a zero denominator. When `m >= n` the subsample is the whole
+   pool, every replicate is identical and the band is degenerate — return
+   the existing degenerate interval rather than dividing by zero.
+3. Update the docstring: state the finite-population derivation, that
+   `sqrt(m/n)` is the `b/n → 0` form and wrong here, and that at
+   `m = n/2` the factor is 1.
+4. **Add a Monte Carlo coverage test.** This is the test whose absence let
+   the error through — no existing test measures coverage. Use the mean of
+   iid normals, assert empirical coverage is within a stated tolerance of
+   the nominal level for at least two `n` values, and seed it so it is
+   deterministic. Keep the trial count low enough to stay fast; assert a
+   band (e.g. 0.92–0.97), not a point.
+5. `paired_delta` inherits the fix through its `subsample_interval` call —
+   verify, do not duplicate the arithmetic.
+
+**Do not** change the `"resample"` path, BCa, the scheme-selection rule, or
+`subsample_size`'s choice of `m`. Do not regenerate reports.
+
+**Consequence for Task 12:** every pooled interval changes. Task 12 must
+regenerate all of them after this lands, including
+`scripts/interval_analysis.py` (see Task 12's amended scope).
+
 ## Task 11 — Continuous integration, and track the evidence
 
 **Files:** new `.github/workflows/ci.yml`, `.gitignore`,
@@ -781,9 +844,31 @@ State plainly where a fix made lattice's own default look *less*
 favourable — that is the point of the exercise, and the project has a
 track record of doing exactly this (commit `f34205d`).
 
-**Do not** re-run the M4 TExEval sweeps or the interval analysis in this
-task; T10's report covers the interval change and no T1–T11 change affects
-M4 edge extraction except T2, which is covered in T13.
+**Also required (amended during execution):** re-run
+`scripts/interval_analysis.py` end to end and commit its JSON. Task 10c
+changes the rescale factor, so **every pooled interval in the repository is
+stale**, including the M3 paired deltas Task 14 must quote. No other task
+owns this script; it is Task 12's.
+
+The three-way M3 ladder it now emits (exact-label -> stemmed-label ->
+embedding-nn@0.90) is the evidence Task 14's identity row depends on.
+Controller-measured under the *pre*-10c factor, for orientation only — these
+numbers will move once 10c lands and must be re-taken, not copied:
+
+| corpus | comparison | delta | P(d>0) |
+|---|---|---|---|
+| conel2 | nn@0.90 - exact-label | +0.0105 | 1.000 |
+| conel2 | stemmed - exact-label | +0.0251 | 1.000 |
+| conel2 | nn@0.90 - stemmed | **-0.0146** | 0.0003 |
+| ecbplus | nn@0.90 - exact-label | +0.0171 | 1.000 |
+| ecbplus | stemmed - exact-label | +0.0070 | 1.000 |
+| ecbplus | nn@0.90 - stemmed | **+0.0101** | 1.000 |
+
+The embedding-vs-stemming comparison **reverses sign by corpus**, significantly
+in both directions. Report that, do not pick a corpus.
+
+**Do not** re-run the M4 TExEval sweeps in this task; no T1-T11 change
+affects M4 edge extraction except T2, which is covered in T13.
 
 ---
 
