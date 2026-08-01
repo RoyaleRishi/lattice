@@ -32,14 +32,27 @@ _UNION = {
 }
 
 # Both profiles share one pipeline topology (M6 spec §4.1); they differ only
-# in extractor and embedder. Every "standard" choice traces to sweep
-# evidence: cosine scorer (M2), embedding-nn@0.90 (M5's recorded operating
-# point), hearst+compound union (M4).
+# in extractor and embedder. Three of "standard"'s five stages were selected
+# by sweep: cosine scorer (M2b, best f1 at every k of four), embedding-nn@0.90
+# (M5's operating point, chosen on the redundancy<->coherence tradeoff and NOT
+# on b3-f1, which peaks at 0.80 on ConEL-2), hearst+compound union (M4, union
+# >= both members on 6/6 golds). The extractor and embedder were never swept —
+# `scorer`, `resolver` and `relation_inducer` are the only axes any config in
+# configs/ varies — so they are M2/M3 design decisions held fixed underneath
+# every comparison, not benchmark outcomes. See the README's "Benchmark
+# evidence" section for what these sweeps do and do not establish.
 _PROFILES: dict[str, dict] = {
     "lite": {
         "segmenter": {"name": "block"},
         "extractor": {"name": "token"},
         "scorer": {"name": "embedding-cosine"},
+        # UNCALIBRATED for this profile. 0.90 is a MiniLM cosine threshold,
+        # inherited from "standard" to keep the two topologies identical, but
+        # "lite" embeds with hashing trigrams, whose similarity geometry is
+        # unrelated — a trigram-overlap cosine of 0.90 does not mean what a
+        # MiniLM cosine of 0.90 means. No sweep has ever been run on the lite
+        # stack. Treat lite as a smoke-test profile, not a scaled-down
+        # version of the measured system.
         "resolver": {"name": "embedding-nn", "params": {"threshold": 0.90}},
         "relation_inducer": _UNION,
         "graph_integrator": {"name": "in-memory"},

@@ -13,7 +13,10 @@ benchmarks — B³ F1 0.9491 vs 0.9386 on ConEL-2, 0.6255 vs 0.6084 on ECB+ —
 though only the ECB+ margin survives a family-wise correction. The gain is
 small and it is mostly morphology: at the shipped operating point the
 embedding resolver makes 7 merges beyond exact string matching on ConEL-2's
-452 mentions, and a free Snowball stemmer reproduces 6 of them.
+452 mentions, and a free Snowball stemmer reproduces 6 of them. Six of the
+seven are singular/plural pairs ("ocean"/"oceans"); the seventh, and the only
+one the stemmer misses, is `favorite color` / `favourite colour`. Rerun that
+count with `scripts/m3_merge_ladder_check.py`.
 
 **What it does not do yet.** Merge synonyms that share no string. On the
 shipped `standard` profile, "vector store" and "vector database" remain two
@@ -24,10 +27,11 @@ Integration below). The fix is contextual resolution — embedding a mention in
 its surrounding text instead of embedding the bare surface. `Mention.context`
 is already populated by every extractor and read by nothing.
 
-Every algorithmic stage is a swappable adapter behind a port. The benchmark
-evidence below concerns the adapters the **`standard`** profile ships. It is
-not evidence about `lite`, whose resolver threshold was never calibrated for
-its embedder — see Profiles.
+Every algorithmic stage is a swappable adapter behind a port. In each
+benchmark below the adapter *under test* is the one **`standard`** ships,
+though the surrounding harness config is the benchmark's own rather than the
+profile verbatim. None of it is evidence about `lite`, whose resolver
+threshold was never calibrated for its embedder — see Profiles.
 
 ## Install
 
@@ -68,19 +72,24 @@ engine = Engine(profile="standard")
 
 ## Profiles
 
-| stage | lite | standard |
-|---|---|---|
-| extractor | token (words ≥ 4 chars) | spaCy noun chunks |
-| embedder | hashing trigrams | all-MiniLM-L6-v2 |
-| scorer | embedding-cosine | embedding-cosine |
-| resolver | embedding-nn @ 0.90 | embedding-nn @ 0.90 |
-| relations | hearst + compound union | hearst + compound union |
+| stage | lite | standard | what picked `standard`'s |
+|---|---|---|---|
+| extractor | token (words ≥ 4 chars) | spaCy noun chunks | M2 spec: real noun phrases. Held fixed as the base of every sweep — **never itself swept** |
+| embedder | hashing trigrams | all-MiniLM-L6-v2 | M2/M3 spec. Likewise held fixed, **never itself swept** |
+| scorer | embedding-cosine | embedding-cosine | M2b scorer sweep: best f1 at every k of four scorers (Salience below) |
+| resolver | embedding-nn @ 0.90 | embedding-nn @ 0.90 | M5 resolver sweep, on the redundancy↔coherence tradeoff — *not* on b3-f1, which peaks elsewhere (Integration below) |
+| relations | hearst + compound union | hearst + compound union | M4 relation-inducer sweep: union ≥ both members on 6/6 golds (Hierarchy below) |
+
+Only the last three stages were ever swept; `scorer`, `resolver` and
+`relation_inducer` are the only axes any config in `configs/` varies. The
+extractor and embedder are design decisions recorded in `docs/`, held
+constant underneath every comparison.
 
 Both profiles share one topology — switching changes quality, never behavior
 shape. Full control: `Engine.from_config(path_or_dict)` with the same TOML
 schema the experiment harness uses.
 
-**The evidence below is for `standard` only.** `lite` inherits
+**The right-hand column is about `standard` only.** `lite` inherits
 `embedding-nn @ 0.90` from `standard`, but 0.90 was calibrated in MiniLM
 cosine space, and `lite` swaps in a hashing-trigram embedder whose similarity
 geometry is unrelated — a trigram-overlap cosine of 0.90 does not mean what a
@@ -90,9 +99,13 @@ version of the measured system.
 
 ## Benchmark evidence
 
-All numbers below are point estimates from the artifacts under `reports/`,
-regenerated 2026-08-01 at seed 0. Provenance, before/after diffs and the full
-interval tables: `docs/results/2026-07-31-post-fix.md`.
+Unless stated otherwise, the numbers below are point estimates from the
+artifacts under `reports/`, regenerated 2026-08-01 at seed 0. Two exceptions,
+both marked where they appear: the 2016 TExEval-2 participant bands are
+transcribed from the task paper via
+`docs/2026-07-12-m4-hierarchy-design.md:299-305`, and the order-sensitivity
+subsection is a permutation study at **seed 1**. Provenance, before/after
+diffs and the full interval tables: `docs/results/2026-07-31-post-fix.md`.
 
 ### Salience — Inspec test split, **n = 500 documents**
 
@@ -185,7 +198,10 @@ cancels in the difference.
 | science-eurovoc | 0.2222 | 0.0157 | **0.2338** | 0.17–0.31 | no, −0.0762 |
 
 `edge-f1`. The union beats both of its members on 6/6 golds and clears the top
-of the published band on 2/6.
+of the published band on 2/6. The band column is the only thing on this page
+not from `reports/`: it is the participant range from the 2016 task paper's
+Table 3 (English F-score), transcribed at
+`docs/2026-07-12-m4-hierarchy-design.md:299-305`.
 
 **The band comparison is not like-for-like, and both departures favour
 lattice:**
@@ -244,24 +260,62 @@ threshold 0.80 (0.9620) and 0.90 sits past the peak.
 
 ### Sensitivity to document order
 
-Over K = 40 shuffled document orderings (seed 1), ConEL-2 b3-f1 at nn@0.90
-varies by 3.3e-16 — floating-point residue — and all six TExEval-2 golds are
-exactly order-invariant (range 0.0 on every key), which is what the
-glossary-first design predicts. The accreted graph's *size* is not exactly
-invariant: over the same 40 orderings concept-count ranges by 2, is-a-edges by
-7, and duplicate-rate by 0.0124, because greedy arrival-order merging decides
-which member of a similar pair survives to be counted.
+Ingestion is a stream, so the same corpus in a different order can give a
+different graph. K = 40 shuffled orderings, seed 1; the table is the observed
+range (max − min) per key.
+
+| entry | key | range over 40 orderings |
+|---|---|---|
+| M3 ConEL-2 nn@0.90 | b3-f1 | 3.3e-16 |
+| M3 ConEL-2 nn@0.90 | b3-recall | 7.8e-16 |
+| **M3 ECB+ nn@0.90** | **b3-f1** | **0.0037** |
+| **M3 ECB+ nn@0.90** | **b3-recall** | **0.0055** |
+| **M3 ECB+ nn@0.90** | **ari** | **0.0066** |
+| M4, all six golds (glossary pinned) | every key | 0.0 |
+| M5 ConEL-2 | concept-count / is-a-edges | 2 / 7 |
+| M5 ConEL-2 | redundancy.duplicate-rate | 0.0124 |
+
+**Identity is order-invariant on ConEL-2 and is not on ECB+**, and that
+matters for how hard the identity result above can be pushed, because ECB+
+carries every surviving margin that involves the shipped resolver. The largest
+of them, nn@0.90 − exact-label, is Δ = +0.0171 with CI lower bound +0.0091: an
+order-induced b3-f1 range of 0.0037 on the same corpus is 22 % of that point
+estimate and 41 % of that lower bound. The margin the corpus-reversal claim
+actually rests on is smaller — nn@0.90 − stemmed-label, Δ = +0.0101, CI
+[+0.0030, +0.0148] — and 0.0037 exceeds its CI lower bound outright. The
+paired-delta construction resamples documents but holds one insertion order
+fixed, so this variability is not inside those intervals; it sits alongside
+them. Read the ECB+ margins as real but not much larger than the pipeline's
+own order noise.
+
+M4's exact 0.0 is narrower than it looks: those six runs set `fixed_prefix: 1`,
+pinning the glossary document at stream position 0 and shuffling only the
+remainder. That is the glossary-first design working as specified, not
+invariance under a full shuffle. The M5 rows are the ordinary case — greedy
+arrival-order merging decides which member of a similar pair survives, so the
+accreted graph's *size* moves even where its clustering quality does not.
 
 ## What is not measured, and what is stale
 
 Stated so a reader can tell where the evidence stops.
 
-- **PromptRank.** A `promptrank` scorer adapter exists, but both arms of
+- **PromptRank.** A `promptrank` scorer adapter exists; none of its published
+  numbers are quoted here as a result, and three artifacts behind them are
+  stale. Both arms of
   `reports/intervals/promptrank/promptrank-paired-delta.json` are stale — its
-  incumbent column is `embedding-cosine` at pre-fix values, and its f1@15
-  bound sits 8.5e-05 from zero, so the sign of its published verdict is not
-  robust. Nothing on this page quotes it. `reports/m2-promptrank-sweep/` also
-  still carries the pre-fix HCUKE row. Both need a re-run, not an adjustment.
+  incumbent column is `embedding-cosine` at pre-fix values — and its f1@15
+  row has upper bound **−8.5e-05**, i.e. 8.5e-05 *below* zero, so a re-measure
+  of either arm can flip its sign. Mind the direction: that row's Δ is
+  **−0.0064** (promptrank 0.3490 against incumbent 0.3555), so PromptRank is
+  the *worse* arm at f1@15 and what is fragile is a significantly-worse
+  finding. `docs/results/2026-07-29-promptrank-baseline.md` states this
+  correctly and carries a superseded banner, but
+  `docs/results/2026-07-31-post-fix.md` §8 glosses the row as PromptRank's
+  own "significantly better" verdict, which inverts it. Do not inherit that
+  reading. `reports/m2-promptrank-sweep/`
+  additionally still carries the pre-fix HCUKE row, and
+  `reports/intervals/m2-promptrank/` predates the F1@K denominator fix that
+  applies to every scorer. All three need a re-run, not an adjustment.
 - **Three M5 holistic interval reports** (`reports/intervals/m5-conel2`,
   `-ecbplus`, `-multiwoz`) were built under the circular redundancy threshold
   and have not been regenerated. Nothing on this page quotes them.

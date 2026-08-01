@@ -1,0 +1,139 @@
+{
+  "arms": {
+    "embedding-nn@0.90": {
+      "concepts": 350,
+      "mentions": 452,
+      "merges": 102
+    },
+    "exact-label": {
+      "concepts": 357,
+      "mentions": 452,
+      "merges": 95
+    },
+    "stemmed-label": {
+      "concepts": 338,
+      "mentions": 452,
+      "merges": 114
+    }
+  },
+  "config": "configs/m3-conel2-stemmed.toml",
+  "corpus": "conel2/test",
+  "embedding_nn_merges_beyond_exact_label": 7,
+  "mentions": 452,
+  "merged_groups": [
+    {
+      "fully_reproduced": true,
+      "merges": 1,
+      "reproduced_by_stemmer": 1,
+      "stem_partition": {
+        "cartoon network": [
+          "cartoon network",
+          "cartoon networks"
+        ]
+      },
+      "surfaces": [
+        "cartoon network",
+        "cartoon networks"
+      ]
+    },
+    {
+      "fully_reproduced": true,
+      "merges": 1,
+      "reproduced_by_stemmer": 1,
+      "stem_partition": {
+        "color": [
+          "color",
+          "colors"
+        ]
+      },
+      "surfaces": [
+        "color",
+        "colors"
+      ]
+    },
+    {
+      "fully_reproduced": false,
+      "merges": 1,
+      "reproduced_by_stemmer": 0,
+      "stem_partition": {
+        "favorit color": [
+          "favorite color"
+        ],
+        "favourit colour": [
+          "favourite colour"
+        ]
+      },
+      "surfaces": [
+        "favorite color",
+        "favourite colour"
+      ]
+    },
+    {
+      "fully_reproduced": true,
+      "merges": 1,
+      "reproduced_by_stemmer": 1,
+      "stem_partition": {
+        "ocean": [
+          "ocean",
+          "oceans"
+        ]
+      },
+      "surfaces": [
+        "ocean",
+        "oceans"
+      ]
+    },
+    {
+      "fully_reproduced": true,
+      "merges": 1,
+      "reproduced_by_stemmer": 1,
+      "stem_partition": {
+        "onlin game": [
+          "online game",
+          "online games"
+        ]
+      },
+      "surfaces": [
+        "online game",
+        "online games"
+      ]
+    },
+    {
+      "fully_reproduced": true,
+      "merges": 1,
+      "reproduced_by_stemmer": 1,
+      "stem_partition": {
+        "sunflow": [
+          "sunflower",
+          "sunflowers"
+        ]
+      },
+      "surfaces": [
+        "sunflower",
+        "sunflowers"
+      ]
+    },
+    {
+      "fully_reproduced": true,
+      "merges": 1,
+      "reproduced_by_stemmer": 1,
+      "stem_partition": {
+        "veget": [
+          "vegetable",
+          "vegetables"
+        ]
+      },
+      "surfaces": [
+        "vegetable",
+        "vegetables"
+      ]
+    }
+  ],
+  "not_reproduced_by_stemmer": [
+    [
+      "favorite color",
+      "favourite colour"
+    ]
+  ],
+  "of_which_reproduced_by_snowball_stem": 6
+}
