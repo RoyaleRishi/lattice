@@ -230,9 +230,14 @@ whichever direction it falls.
     `brackets_estimate` — a deferred shape change, not an oversight.
 
   `brackets_estimate = false` means the emitted band is **not** a confidence
-  interval but a corpus-size sensitivity range (the shipped case is `edge-f1`); it
-  must not be quoted as a CI. `true` is necessary, not sufficient — see
-  `_brackets` in `src/lattice/harness/stats/report.py`.
+  interval but a corpus-size sensitivity range; it must not be quoted as a CI.
+  There are **two** shipped cases, and they fail in opposite directions:
+  `edge-f1` on the `food` / `food-wordnet` golds, where a set-union prediction
+  side makes θ(m) < θ(n); and `clustering`'s six B³ cells on **ECB+**, where a
+  smaller mention pool manufactures fewer cross-document confusions and
+  θ(m) > θ(n). Both are recorded in `docs/results/2026-07-31-post-fix.md` §3.2
+  and §4. `true` is necessary, not sufficient — see `_brackets` in
+  `src/lattice/harness/stats/report.py`.
 - Per paired claim — delta, CI, `prob_positive`; per threshold grid — point + CI at
   each threshold; per permutation — spread stats; per comparison family — the
   Holm-Bonferroni verdict (`m3-multiplicity.json`, added 2026-08-01: the six M3
