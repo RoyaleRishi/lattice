@@ -32,7 +32,7 @@ from lattice.adapters.relation_inducer import (  # noqa: F401
     hearst,
     union,
 )
-from lattice.adapters.resolver import embedding_nn, exact_label  # noqa: F401
+from lattice.adapters.resolver import embedding_nn, exact_label, stemmed_label  # noqa: F401
 from lattice.adapters.scorer import (  # noqa: F401
     embedding_cosine,
     frequency,
