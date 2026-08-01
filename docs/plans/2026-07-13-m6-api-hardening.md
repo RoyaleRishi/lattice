@@ -975,11 +975,43 @@ engine = Engine(profile="standard")
 | resolver | embedding-NN @ 0.90 | embedding-NN @ 0.90 | M5's recorded operating point |
 | relations | hearst + compound | hearst + compound | above published TExEval-2 band on 2/6 golds (M4) |
 
+> **Correction (2026-08-01, branch `fix/review-findings`).** The evidence
+> column overstates the top two rows: the extractor and the embedder were
+> **never swept** — `scorer`, `resolver` and `relation_inducer` are the only
+> axes any config in `configs/` varies, so "(M2/M3 sweeps)" names specs, not
+> sweeps. Retracted in `src/lattice/engine.py`'s `_PROFILES` comment, the
+> README's Profiles table, and
+> `docs/2026-07-13-m6-api-hardening-design.md` §4.1.
+
 Both profiles share one topology — switching changes quality, never
 behavior shape. Full control: `Engine.from_config(path_or_dict)` with the
 same TOML schema the experiment harness uses.
 
 ## Benchmark evidence
+
+> # SUPERSEDED — this table is the falsified README headline (2026-08-01)
+>
+> **Current numbers: [`../results/2026-07-31-post-fix.md`](../results/2026-07-31-post-fix.md)
+> and the repository README's "Benchmark evidence" section.**
+> **No number below has been edited** (GC8); this plan is kept as the record of
+> what M6 was written against. The table it prescribed for the README was
+> retracted on branch `fix/review-findings`:
+>
+> - **identity** — `0.643 vs 0.608` and `0.962 vs 0.939` are maxima over the
+>   threshold grid (0.6428 at 0.75, 0.9620 at 0.80), not the shipped `nn@0.90`
+>   operating point, which is 0.6255 and 0.9491. That is the selection bias
+>   `docs/2026-07-14-statistical-intervals-design.md` §6 forbids. `nn@0.90`
+>   also loses to the free `stemmed-label` baseline on ConEL-2, and neither
+>   ConEL-2 comparison involving `embedding-nn` survives Holm–Bonferroni.
+> - **integration** — `duplicate-rate 0.117 → 0.015` is a tautology, not a
+>   measurement: it was produced with the redundancy metric's cosine threshold
+>   equal to the resolver's, which makes a cosine-flagged duplicate impossible
+>   by construction. Measured at a decoupled threshold the reduction is
+>   0.7040 → 0.6769 (3.8 %).
+> - **salience** — `F1@10 0.355 vs frequency 0.240` predates the F1@K
+>   stem-dedupe fix; the current values are 0.3544 and 0.2413.
+> - **hierarchy** — the 6/6 and two-gold band claims still hold, with the
+>   not-like-for-like caveats the README now carries.
 
 | track | benchmark | headline |
 |---|---|---|

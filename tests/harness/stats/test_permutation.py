@@ -20,7 +20,7 @@ CFG = ExperimentConfig.model_validate({
         "params": {"root": "tests/fixtures/mini_clusters_conel", "split": "test"},
     },
     "metrics": [
-        {"name": "redundancy"},
+        {"name": "redundancy", "params": {"threshold": 0.9}},
         {"name": "hierarchy-sanity"},
     ],
 })

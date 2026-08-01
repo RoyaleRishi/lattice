@@ -36,7 +36,10 @@ def _config(resolver: dict) -> ExperimentConfig:
                 "name": "mention-clusters",
                 "params": {"root": ROOT, "split": "test"},
             },
-            "metrics": [{"name": "redundancy"}, {"name": "hierarchy-sanity"}],
+            "metrics": [
+                {"name": "redundancy", "params": {"threshold": 0.9}},
+                {"name": "hierarchy-sanity"},
+            ],
             "document_metrics": [{"name": "coherence"}],
         }
     )

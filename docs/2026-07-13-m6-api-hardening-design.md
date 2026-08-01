@@ -109,6 +109,25 @@ recorded operating point nn@0.90; M4 union). `lite` is documented as
 functional-but-unvalidated: same shape, toy extractor/embedder, for smoke
 tests, CI, and first contact.
 
+> **Correction (2026-08-01, branch `fix/review-findings`).** The first
+> sentence above is **retracted as written** — it is kept, not deleted, so
+> the claim this project shipped stays legible. *Three* of `standard`'s
+> stages trace to a sweep: the `embedding-cosine` scorer (M2b, best f1 at
+> every k of four), the `embedding-nn @ 0.90` resolver (M5's operating point,
+> chosen on the redundancy↔coherence tradeoff and **not** on b3-f1, which
+> peaks at 0.80 on ConEL-2), and the `union(hearst, compound)` inducer (M4,
+> union ≥ both members on 6/6 golds). The **extractor** (`noun-chunk`) and
+> the **embedder** (`sentence-transformer`) were **never swept**: `scorer`,
+> `resolver` and `relation_inducer` are the only axes any config in
+> `configs/` varies, so those two are M2/M3 design decisions held fixed
+> underneath every comparison, not benchmark outcomes. The table itself is
+> unchanged and still describes what ships. The same claim was retracted in
+> `src/lattice/engine.py`'s `_PROFILES` comment and in the README's
+> Profiles table; see the README's "Benchmark evidence" section for what the
+> sweeps do and do not establish. `lite`'s resolver additionally carries an
+> uncalibrated 0.90 threshold — a MiniLM-space cutoff applied to hashed
+> trigrams — which the README discloses and this spec does not.
+
 ### 4.2 `src/lattice/graph_view.py` — read surface
 
 ```python

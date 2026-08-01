@@ -24,7 +24,7 @@ M5 = ExperimentConfig.model_validate({
         "name": "mention-clusters",
         "params": {"root": "tests/fixtures/mini_clusters_conel", "split": "test"},
     },
-    "metrics": [{"name": "redundancy"}],
+    "metrics": [{"name": "redundancy", "params": {"threshold": 0.9}}],
     "document_metrics": [{"name": "clustering"}],
 })
 

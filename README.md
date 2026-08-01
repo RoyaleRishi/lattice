@@ -134,7 +134,10 @@ the three embedding-based scorers.
 
 ### Identity — ConEL-2 (**n = 58 conversations / 452 mentions**) and ECB+ (**n = 206 documents / 2054 mentions**)
 
-Gold mentions in, B³ against gold clusters. Three resolvers, one ladder:
+Gold mentions in, B³ against gold clusters. Corpus sizes are the
+`corpus_census` block of
+`reports/intervals/analysis/m3-merge-ladder-check.json`, counted through the
+same `mention-clusters` reader the runs use. Three resolvers, one ladder:
 
 | resolver | ConEL-2 b3-f1 | ECB+ b3-f1 |
 |---|---|---|
@@ -224,7 +227,9 @@ The `food` and `food-wordnet` interval bands are likewise not confidence
 intervals: `edge-f1` unions per-document edge sets, so the statistic is
 monotone in distinct-document count and the resampled value sits below the
 full-corpus estimate by construction. They are reported as size-sensitivity
-ranges.
+ranges. The same condition catches `science`'s `predicted_edges` cell, and the
+cells carrying it are not enumerated here — `brackets_estimate: false` in
+`reports/intervals/*/interval-report.json` is the authority.
 
 ### Integration — ConEL-2 intrinsic, **n = 58 conversations**
 
@@ -273,7 +278,7 @@ range (max − min) per key.
 | **M3 ECB+ nn@0.90** | **ari** | **0.0066** |
 | M4, all six golds (glossary pinned) | every key | 0.0 |
 | M5 ConEL-2 | concept-count / is-a-edges | 2 / 7 |
-| M5 ConEL-2 | redundancy.duplicate-rate | 0.0124 |
+| M5 ConEL-2 | redundancy.duplicate-rate (metric threshold **0.80**) | 0.0124 |
 
 **Identity is order-invariant on ConEL-2 and is not on ECB+**, and that
 matters for how hard the identity result above can be pushed, because ECB+
@@ -295,17 +300,30 @@ invariance under a full shuffle. The M5 rows are the ordinary case — greedy
 arrival-order merging decides which member of a similar pair survives, so the
 accreted graph's *size* moves even where its clustering quality does not.
 
+**Do not read the 0.0124 against the 0.6769 in the Integration table above.**
+The order study runs `configs/m5-conel2-nn090.toml`, whose redundancy metric
+threshold is 0.80; the Integration table runs the sweep config at 0.60. The
+level 0.0124 was measured against is `duplicate-rate` **0.2524**
+(`reports/intervals/m5-conel2-b50/interval-report.json`), so the order-induced
+range is ~4.9 % of its own baseline, not the ~1.8 % a cross-table division
+would suggest.
+
 ## What is not measured, and what is stale
 
 Stated so a reader can tell where the evidence stops.
 
 - **PromptRank.** A `promptrank` scorer adapter exists; none of its published
   numbers are quoted here as a result, and three artifacts behind them are
-  stale. Both arms of
-  `reports/intervals/promptrank/promptrank-paired-delta.json` are stale — its
-  incumbent column is `embedding-cosine` at pre-fix values — and its f1@15
-  row has upper bound **−8.5e-05**, i.e. 8.5e-05 *below* zero, so a re-measure
-  of either arm can flip its sign. Mind the direction: that row's Δ is
+  stale. In
+  `reports/intervals/promptrank/promptrank-paired-delta.json` the incumbent
+  column is `embedding-cosine` at pre-fix values, so both arms are stale at
+  f1@5 and f1@10 — **but not at f1@15**, where the incumbent
+  `0.35545236519207857` is byte-identical to the current post-fix value in
+  `reports/intervals/m2b/interval-report.json` (the stem-dedupe fix saturates
+  at k = 15, `min(k, n_distinct_stems)`). The fragile row is the f1@15 one:
+  its upper bound is **−8.5e-05**, i.e. 8.5e-05 *below* zero, and **only the
+  PromptRank arm of it is unmeasured**, so re-measuring that one arm can flip
+  its sign. Mind the direction: that row's Δ is
   **−0.0064** (promptrank 0.3490 against incumbent 0.3555), so PromptRank is
   the *worse* arm at f1@15 and what is fragile is a significantly-worse
   finding. `docs/results/2026-07-29-promptrank-baseline.md` states this

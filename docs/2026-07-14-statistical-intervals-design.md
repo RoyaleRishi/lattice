@@ -229,14 +229,42 @@ whichever direction it falls.
   - *holistic* metrics (M5) carry only `percentile` and no `scheme`/`m`/`n`/
     `brackets_estimate` — a deferred shape change, not an oversight.
 
+  `method` names the construction, not the width of the band. A zero-width band
+  is labelled `"subsample"` whenever `m < n` — which is every shipped M4
+  `gold_edges` cell, constant under resampling but reported by the ordinary
+  path. `"degenerate"` is emitted only where the rescale is undefined (`n == 0`
+  or `m >= n` in `_subsample_tau`) or a BCa resample set has zero variance,
+  and no shipped corpus reaches either — a recursive grep for `degenerate`
+  under `reports/intervals/` returns nothing.
+  **Consumers must test `lo == hi`, not
+  `method == "degenerate"`** (corrected 2026-08-01; a parked Task 10c ruling
+  said the opposite).
+
   `brackets_estimate = false` means the emitted band is **not** a confidence
   interval but a corpus-size sensitivity range; it must not be quoted as a CI.
-  There are **two** shipped cases, and they fail in opposite directions:
-  `edge-f1` on the `food` / `food-wordnet` golds, where a set-union prediction
-  side makes θ(m) < θ(n); and `clustering`'s six B³ cells on **ECB+**, where a
-  smaller mention pool manufactures fewer cross-document confusions and
-  θ(m) > θ(n). Both are recorded in `docs/results/2026-07-31-post-fix.md` §3.2
-  and §4. `true` is necessary, not sufficient — see `_brackets` in
+  **The condition, not a list** (restructured 2026-08-01, after this sentence
+  went stale twice by enumerating cells): the flag drops whenever the statistic
+  depends systematically on how many items are pooled, so θ(m) sits on the same
+  side of θ(n) in draw after draw and no band around the estimate can straddle
+  it at any m. That is bias in the functional, not variance a rate correction
+  can rescale away, and it appears in both directions — `edge-f1` unions
+  per-document edge sets, so θ(m) < θ(n); B³ on **ECB+** manufactures fewer
+  cross-document confusions in a smaller mention pool, so θ(m) > θ(n). Which
+  *cells* carry it is a property of the artifacts, and the artifacts are the
+  authority; do not restate a count here. Enumerate them with:
+
+  ```bash
+  .venv/bin/python -c 'import glob,json
+  for p in sorted(glob.glob("reports/intervals/*/interval-report.json")):
+      for m, keys in json.load(open(p))["metrics"].items():
+          for k, cell in keys.items():
+              if cell.get("brackets_estimate") is False: print(p, f"{m}.{k}")'
+  ```
+
+  `docs/results/2026-07-31-post-fix.md` §3.2 and §4 discuss the affected
+  families in prose (and §4 flags the one `edge-f1` cell — `science`
+  `predicted_edges` — that a "food / food-wordnet" reading of the same
+  condition misses). `true` is necessary, not sufficient — see `_brackets` in
   `src/lattice/harness/stats/report.py`.
 - Per paired claim — delta, CI, `prob_positive`; per threshold grid — point + CI at
   each threshold; per permutation — spread stats; per comparison family — the

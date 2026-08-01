@@ -18,6 +18,24 @@
   },
   "config": "configs/m3-conel2-stemmed.toml",
   "corpus": "conel2/test",
+  "corpus_census": {
+    "conel2": {
+      "documents": 58,
+      "gold_clusters": 316,
+      "gold_mentions": 452,
+      "root": "data/conel2",
+      "split": "test",
+      "unit": "conversations"
+    },
+    "ecbplus": {
+      "documents": 206,
+      "gold_clusters": 608,
+      "gold_mentions": 2054,
+      "root": "data/ecbplus",
+      "split": "test",
+      "unit": "documents"
+    }
+  },
   "embedding_nn_merges_beyond_exact_label": 7,
   "mentions": 452,
   "merged_groups": [

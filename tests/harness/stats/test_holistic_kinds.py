@@ -5,10 +5,10 @@ from lattice.harness.stats.records import Resamplable
 
 
 def test_intrinsic_metrics_declare_holistic():
-    assert Redundancy().kind == "holistic"
+    assert Redundancy(threshold=0.9).kind == "holistic"
     assert HierarchySanity().kind == "holistic"
     # Coherence needs an embedder; a trivial stand-in is fine for the attribute check
     class _E:
         def embed(self, xs): return [(0.0,) for _ in xs]
     assert Coherence(_E()).kind == "holistic"
-    assert isinstance(Redundancy(), Resamplable)
+    assert isinstance(Redundancy(threshold=0.9), Resamplable)

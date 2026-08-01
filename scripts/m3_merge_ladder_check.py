@@ -35,6 +35,15 @@ read off `GraphDelta.resolutions` in stream order. Then:
    re-partitioned by Snowball stem, using `StemmedLabelResolver`'s own
    `_stem`. Merges the stemmer reproduces are counted, and the ones it misses
    are listed by surface so the reader can see what the embedding bought.
+5. **Corpus census** (added 2026-08-01). The README's identity header quotes
+   corpus sizes for *both* identity corpora — "58 conversations / 452
+   mentions" and "206 documents / 2054 mentions". Only ConEL-2's had an
+   artifact behind it (this script's `mentions`), and `documents_processed`
+   in the M3 sweep reports covers the document counts, so ECB+'s mention
+   count was the last figure in that header with no committed source. It is
+   counted here through the shipped `mention-clusters` reader — the same
+   adapter the M3 configs load — rather than by re-parsing the JSONL, and
+   the ConEL-2 row is asserted against the pipeline run above.
 
     PYTHONPATH=src .venv/bin/python scripts/m3_merge_ladder_check.py [out_dir]
 
@@ -47,6 +56,7 @@ import sys
 from collections import defaultdict
 from pathlib import Path
 
+from lattice.adapters.dataset.mention_clusters import MentionClustersDataset
 from lattice.adapters.resolver.stemmed_label import StemmedLabelResolver
 from lattice.config.factory import build_orchestrator, instantiate
 from lattice.config.loader import load_config
@@ -55,6 +65,10 @@ from lattice.harness.sweep import SweepConfig
 from lattice.ports import Dataset
 
 CONFIG = "configs/m3-conel2-stemmed.toml"
+CENSUS_CORPORA = {
+    "conel2": {"root": "data/conel2", "split": "test", "unit": "conversations"},
+    "ecbplus": {"root": "data/ecbplus", "split": "test", "unit": "documents"},
+}
 ARMS = {
     "exact-label": {"name": "exact-label"},
     "stemmed-label": {"name": "stemmed-label"},
@@ -88,6 +102,26 @@ def _run_arm(resolver: dict) -> tuple[list[MentionKey], list[str], int]:
             )
             concept_ids.append(resolution.concept.id)
     return keys, concept_ids, len(orchestrator.snapshot().concepts)
+
+
+def corpus_census() -> dict[str, dict[str, object]]:
+    """Sizes of both identity corpora, read through the shipped
+    `mention-clusters` adapter. `gold_mentions` counts the keys of
+    `ground_truth()["clusters_by_mention"]` — the mention units B³ actually
+    scores over, not raw JSONL rows."""
+    census: dict[str, dict[str, object]] = {}
+    for name, spec in CENSUS_CORPORA.items():
+        dataset = MentionClustersDataset(root=spec["root"], split=spec["split"])
+        clusters_by_mention = dataset.ground_truth()["clusters_by_mention"]
+        census[name] = {
+            "unit": spec["unit"],
+            "root": spec["root"],
+            "split": spec["split"],
+            "documents": sum(1 for _ in dataset.documents()),
+            "gold_mentions": len(clusters_by_mention),
+            "gold_clusters": len(set(clusters_by_mention.values())),
+        }
+    return census
 
 
 def run_all() -> dict[str, object]:
@@ -171,10 +205,19 @@ def run_all() -> dict[str, object]:
             f"difference is {extra_merges}"
         )
 
+    # (5) corpus census, cross-checked against the run above
+    census = corpus_census()
+    if census["conel2"]["gold_mentions"] != n_mentions:
+        raise AssertionError(
+            f"census counts {census['conel2']['gold_mentions']} ConEL-2 gold "
+            f"mentions but the pipeline enumerated {n_mentions}"
+        )
+
     return {
         "corpus": "conel2/test",
         "config": CONFIG,
         "mentions": n_mentions,
+        "corpus_census": census,
         "arms": per_arm,
         "embedding_nn_merges_beyond_exact_label": extra_merges,
         "of_which_reproduced_by_snowball_stem": reproduced,
@@ -199,6 +242,12 @@ def _print_summary(results: dict) -> None:
     )
     for surfaces in results["not_reproduced_by_stemmer"]:
         print(f"  not reproduced: {' | '.join(surfaces)}")
+    print("\ncorpus census (both identity corpora):")
+    for name, row in results["corpus_census"].items():
+        print(
+            f"  {name:<10}{row['documents']:>5} {row['unit']} / "
+            f"{row['gold_mentions']} gold mentions in {row['gold_clusters']} clusters"
+        )
 
 
 def main() -> None:

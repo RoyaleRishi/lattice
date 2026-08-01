@@ -226,7 +226,7 @@ HCFG = ExperimentConfig.model_validate({
             "split": "test",
         },
     },
-    "metrics": [{"name": "redundancy"}],
+    "metrics": [{"name": "redundancy", "params": {"threshold": 0.9}}],
 })
 
 
