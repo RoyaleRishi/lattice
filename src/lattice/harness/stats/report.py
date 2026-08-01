@@ -25,23 +25,44 @@ from lattice.ports import Dataset
 def _brackets(estimate: float, iv: Interval) -> bool:
     """Does the interval contain the point estimate it is reported against?
 
-    False means the emitted band is NOT a confidence interval and must not be
-    quoted as one. The usual cause is a size-dependent pooled functional — one
-    whose value depends on how many distinct documents are in the sample, such
-    as a set-union prediction side or a fixed corpus-level denominator (see
-    EdgeF1). For those, theta(m) < theta(n) deterministically, the draws never
-    straddle the estimate at any m, and the band is a corpus-size sensitivity
-    range. This flag exists so a consumer of the JSON can tell the two apart
-    without re-deriving the argument.
+    NECESSARY, NOT SUFFICIENT. Read the two values asymmetrically:
+
+    False is decisive. The emitted band is NOT a confidence interval and must
+    not be quoted as one. The usual cause is a size-dependent pooled functional
+    — one whose value depends on how many distinct documents are in the sample,
+    such as a set-union prediction side or a fixed corpus-level denominator
+    (see EdgeF1). For those, theta(m) != theta(n) deterministically, the draws
+    never straddle the estimate at any m, and the band is a corpus-size
+    sensitivity range.
+
+    True is not a clean bill of health, and in particular does not certify that
+    the functional is size-invariant. A pooled subsampling band is exact only
+    for a size-invariant functional; every pooled metric shipped here has some
+    size dependence, and a band can bracket merely because tau-shrinkage pulled
+    one-sided draws back far enough. B3 is the live example: on M3 ConEL-2 the
+    raw size-29 draws for b3-recall span ~[0.8940, 0.9468] against a
+    full-corpus estimate of 0.9050, so theta(m) > theta(n) systematically, and
+    b3-f1's band clears its estimate by only 0.0039 — bracketing there is
+    contingent on the arbitrary choice m = n / 2 (see ClusteringMetric). ARI on
+    the same data is genuinely well-behaved: its draws straddle at
+    [0.699, 0.897] around 0.804.
+
+    So: treat False as a hard stop, and True as "not obviously invalid" —
+    then check the metric's own docstring before quoting a band as a CI.
     """
     return iv.lo <= estimate <= iv.hi
 
 
 def _iv(estimate: float, resamples: list[float], jack: list[float], level: float) -> dict:
     """n-out-of-n bootstrap draws (macro metrics): BCa plus the plain
-    percentile interval. BCa is the authoritative one — it already falls back
-    to the percentile interval when its own adjustment would not bracket — so
-    it is what `brackets_estimate` is computed from."""
+    percentile interval. BCa is the authoritative one and is what
+    `brackets_estimate` is computed from. Note that BCa's own guard is not a
+    guarantee of bracketing: when its adjustment would not bracket it falls
+    back to the plain percentile interval, and that fallback can itself exclude
+    the estimate (see test_bca_falls_back_when_interval_would_not_bracket_estimate,
+    where the fallback is (10.0, 10.0) against an estimate of 5.0). The flag is
+    computed from the interval that is actually emitted, so it stays correct
+    either way."""
     bca = bca_interval(estimate, resamples, jack, level)
     pct = percentile_interval(estimate, resamples, level)
     return {

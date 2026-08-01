@@ -107,6 +107,42 @@ def test_resample_scheme_values_are_frozen():
 
 
 # --- the "subsample" path ------------------------------------------------------
+# The subsample sequence is frozen too, and for a sharper reason than the
+# resample one. `random.sample` uses a size-dependent selection strategy
+# (set-based rejection vs. partial shuffle) that is an implementation detail,
+# not part of Python's cross-version reproducibility guarantee the way
+# `Random.randrange`'s underlying Mersenne Twister stream is. A stdlib change to
+# it would silently move every pooled interval in the project with nothing else
+# failing. Captured on CPython 3.13.7. If this test breaks after an interpreter
+# upgrade, that is the finding — do not just re-baseline the literal; the
+# published pooled intervals were computed under the old sequence.
+
+FROZEN_SUBSAMPLE_SEED0 = [
+    ["d3", "d5", "d0"],
+    ["d2", "d4", "d3"],
+    ["d3", "d2", "d5"],
+    ["d2", "d4", "d1"],
+    ["d4", "d1", "d2"],
+    ["d1", "d0", "d2"],
+]
+FROZEN_SUBSAMPLE_SEED0_FIXED_D0 = [
+    ["d0", "d4", "d5"],
+    ["d0", "d1", "d3"],
+    ["d0", "d5", "d4"],
+    ["d0", "d4", "d3"],
+]
+
+
+def test_subsample_scheme_draw_sequence_is_frozen():
+    bundle, seen = _recording_bundle_ids([f"d{i}" for i in range(6)])
+    bootstrap(bundle, samples=6, seed=0, scheme="subsample")
+    assert seen == FROZEN_SUBSAMPLE_SEED0
+
+
+def test_subsample_scheme_draw_sequence_is_frozen_with_fixed_ids():
+    bundle, seen = _recording_bundle_ids([f"d{i}" for i in range(6)])
+    bootstrap(bundle, samples=4, seed=0, fixed_doc_ids=["d0"], scheme="subsample")
+    assert seen == FROZEN_SUBSAMPLE_SEED0_FIXED_D0
 
 
 @pytest.mark.parametrize(

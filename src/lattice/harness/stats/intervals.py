@@ -54,14 +54,36 @@ def subsample_interval(
     n: int,
     level: float = 0.95,
 ) -> Interval:
-    """m-out-of-n subsampling interval (Politis, Romano & Wolf, *Subsampling*,
-    1999). The draws come from size-m replicates, which are more variable than
-    the full size-n sample by the convergence rate sqrt(n / m); the correction
-    is to lay the draw quantiles back around the point estimate shrunk by
-    tau = sqrt(m / n):
+    """Percentile-form m-out-of-n subsampling interval. The draws come from size-m
+    replicates, which are more variable than the full size-n sample by the
+    convergence rate sqrt(n / m); the correction is to lay the draw quantiles
+    back around the point estimate shrunk by tau = sqrt(m / n):
 
         lo = estimate + tau * (q(alpha/2)     - estimate)
         hi = estimate + tau * (q(1 - alpha/2) - estimate)
+
+    ATTRIBUTION — this is NOT the interval in Politis, Romano & Wolf,
+    *Subsampling* (1999), and should not be checked against it as if it were.
+    PRW's construction is root-based: it estimates the sampling distribution of
+    sqrt(m) * (theta_hat_m - theta_hat_n) and inverts it, which *reflects* the
+    quantiles about the estimate —
+
+        lo = estimate - tau * (q(1 - alpha/2) - estimate)
+        hi = estimate - tau * (q(alpha/2)     - estimate)
+
+    — where the form above re-centres them without reflecting. The two coincide
+    only when the draw distribution is symmetric about the estimate; on
+    one-sided draws they move in opposite directions. What this function borrows
+    from PRW is the sqrt(m / n) rate, not the interval.
+
+    Why the percentile form was chosen here: on the size-dependent pooled
+    metrics this codebase actually resamples (see below), the draws are
+    systematically to one side of the estimate. The reflected form then throws
+    the band across to the *opposite* side — on M4 food, where every draw sits
+    below the estimate, PRW's interval would sit entirely above it — which is
+    strictly less informative than a band that shrinks toward the estimate from
+    the side the draws are on. This is a deliberate choice for one-sided
+    behaviour, not a transcription of the reference.
 
     Unlike a raw percentile interval over subsample draws this is anchored on
     the estimate, so it brackets it whenever the draws straddle it, and when
@@ -82,9 +104,15 @@ def subsample_interval(
     under the with-replacement bootstrap alike — it is a bias in the
     functional, not variance that a rate correction can rescale away. The
     output is then a corpus-size sensitivity range, not a confidence interval,
-    and must not be quoted as one. `edge-f1` is the shipped example; see its
-    docstring. report.py emits `brackets_estimate` so the distinction is
-    machine-readable in the artifact.
+    and must not be quoted as one.
+
+    Size dependence is a spectrum, not a binary. `edge-f1` is the severe
+    shipped case — its bands never bracket. `clustering`'s B³ keys are a
+    milder, opposite-signed case that brackets only because tau-shrinkage pulls
+    the one-sided draws back far enough. Both metrics document their own
+    behaviour; read theirs before quoting a band. report.py emits
+    `brackets_estimate`, which is decisive when False but is necessary rather
+    than sufficient when True.
 
     n == 0 means every document was held fixed: there is nothing to resample,
     so the honest answer is a zero-width interval at the estimate.

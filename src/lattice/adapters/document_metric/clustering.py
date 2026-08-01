@@ -56,7 +56,34 @@ class ClusteringMetric(DocumentMetric, Resamplable):
     resolved concept id across ALL deltas; gold comes from
     ground_truth["clusters_by_mention"]. Coverage must match 1:1 in both
     directions — the gold-mention protocol guarantees it, so any mismatch is
-    a broken config, never a metric decision (spec §7)."""
+    a broken config, never a metric decision (spec §7).
+
+    B³ IS MILDLY SIZE-DEPENDENT; READ ITS INTERVALS WITH THAT IN MIND. This
+    metric is `pooled`, so the harness draws it without replacement (see
+    resample.py), which removes the duplication inflation that made a
+    with-replacement replicate score a corpus containing a real error as
+    perfect. That was the serious defect and it is gone. What remains is a
+    milder, opposite-signed effect that subsampling does not remove: B³ is
+    computed against the gold clusters *restricted to the drawn documents*, so
+    a cross-document error can be dropped along with one of its endpoints. A
+    gold cluster split 2+2 by the resolver scores B³-recall 0.5 at full size,
+    but 1.0 in a subsample that happened to keep only one side — so subsets
+    systematically flatter B³, i.e. theta(m) > theta(n).
+
+    Measured on M3 ConEL-2 nn@0.90 (m=29, n=58), raw draws before the
+    sqrt(m / n) rescaling: b3-recall spans ~[0.8940, 0.9468] against a
+    full-corpus estimate of 0.9050, and b3-f1 ~[0.9436, 0.9723] against 0.9491
+    — in both, the estimate sits near the lower tail of the size-m draws. The
+    emitted bands do bracket, but partly because tau-shrinkage pulls them back:
+    b3-f1 clears its estimate by 0.0039, which is contingent on the arbitrary
+    m = n / 2. So `brackets_estimate: true` on a B³ key is necessary, not
+    sufficient — do not read it as certifying a size-invariant functional.
+
+    ARI is the well-behaved key on this metric: on the same data its draws
+    straddle the estimate at [0.699, 0.897] around 0.804. Contrast `edge-f1`,
+    whose size dependence is severe enough that its bands never bracket at all;
+    see EdgeF1's docstring.
+    """
 
     kind = "pooled"
 

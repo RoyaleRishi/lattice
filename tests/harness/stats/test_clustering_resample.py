@@ -81,6 +81,10 @@ def test_duplicating_a_document_must_not_improve_a_cross_document_error():
 
     # 2. The degree-2 failure itself, pinned so it cannot creep back in: hand
     #    _aggregate a duplicate and the cross-document error vanishes outright.
+    #    NOTE: this half characterizes current behaviour, it does not require
+    #    it. If _aggregate is ever repaired to be duplication-invariant (e.g.
+    #    by keying mentions globally instead of by draw position), this
+    #    assertion SHOULD fail — delete it then, and keep part 1.
     base = ClusteringMetric._aggregate([doc_a, doc_b], {})
     dup = ClusteringMetric._aggregate([doc_a, doc_a], {})
     assert base["b3-precision"] == pytest.approx(0.5) and base["ari"] == 0.0
