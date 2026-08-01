@@ -29,6 +29,22 @@ _KUBERNETES_CONFIG = {
     "run": {"on_error": "skip", "seed": 0},
 }
 
+_STEMMED_CONFIG = {
+    "segmenter": {"name": "block"},
+    "extractor": {"name": "token"},
+    "scorer": {"name": "passthrough"},
+    "resolver": {"name": "stemmed-label"},
+    "relation_inducer": {"name": "co-occurrence"},
+    "graph_integrator": {"name": "in-memory"},
+    "embedder": {"name": "hashing"},
+    "concept_store": {"name": "in-memory"},
+    "run": {"on_error": "fail", "seed": 0},
+}
+
+STEM_A = "Clusters restart automatically."
+STEM_B = "A cluster rejoined smoothly."
+STEM_C = "Every cluster deployment succeeded."
+
 
 class _FailOnBeta(RelationInducer):
     """Wraps a real inducer but raises for the one document that mentions
@@ -84,6 +100,28 @@ def test_resume_equivalence_holds_when_a_document_fails_mid_pipeline(tmp_path):
     interrupted.save(path)
     resumed = Engine.load(path)
     resumed.ingest(KUBE_C)
+
+    assert resumed.snapshot() == straight.snapshot()
+
+
+def test_resume_equivalence_with_stemmed_label_resolver(tmp_path):
+    """Regression: `stemmed-label` keeps its stem -> concept-id cache as
+    resolver-local state. `Engine.load()` rebuilds a fresh resolver (empty
+    cache) and repopulates the concept store directly, bypassing that cache
+    entirely. Before the fix, a post-load mention whose stem was already
+    resolved pre-save ("cluster" after "Clusters") missed the cache and
+    fell straight into concept creation without ever querying the store,
+    clobbering the existing concept's label/first_seen and misreporting
+    is_new=True for what is really a re-merge."""
+    straight = Engine.from_config(_STEMMED_CONFIG)
+    straight.ingest_all([STEM_A, STEM_B, STEM_C])
+
+    interrupted = Engine.from_config(_STEMMED_CONFIG)
+    interrupted.ingest_all([STEM_A])
+    path = tmp_path / "memory.json"
+    interrupted.save(path)
+    resumed = Engine.load(path)
+    resumed.ingest_all([STEM_B, STEM_C])
 
     assert resumed.snapshot() == straight.snapshot()
 

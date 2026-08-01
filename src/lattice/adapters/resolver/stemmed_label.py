@@ -28,12 +28,23 @@ class StemmedLabelResolver(Resolver):
     so identity is stable across surfaces that collapse to it.
 
     `ConceptStore.find_by_label` is keyed on `Concept.label` (the surface),
-    so it cannot be used for stem lookup: this resolver keeps its own
-    `dict[str, str]` mapping stem -> concept id. That mapping is
-    resolver-local state and is NOT covered by `ConceptStore.checkpoint()` /
-    `rollback()` -- on the orchestrator's `on_error="skip"` path the store
-    rolls back but this mapping does not, so a skipped document's stems can
-    remain resolvable. Accepted limitation for this task."""
+    so it cannot be used for stem lookup. `Concept.id` is instead a pure
+    function of the stem, so this resolver recomputes it from the stem on
+    every call and always confirms existence via `concept_store.get(...)` --
+    the resolver-local `dict[str, str]` mapping stem -> concept id
+    (`_concept_id_by_stem`) is consulted first only to skip recomputing the
+    uuid5 hash; it is never the sole existence gate. That makes the cache
+    correctness-inert: a miss (e.g. a fresh resolver after `Engine.load()`,
+    which repopulates the concept store but not this cache) or a stale hit
+    surviving a `ConceptStore.rollback()` (the orchestrator's
+    `on_error="skip"` path) always falls through to a real store lookup, and
+    a genuine miss there self-heals by recreating the same deterministic
+    concept id rather than diverging. The residual risk is therefore not
+    incorrect merges or duplicate ids, but that a recreated concept's
+    `first_seen`/`updated_at` reset to the current document -- e.g. a
+    concept whose only prior occurrence was rolled back away will look
+    "newly first seen" on its next occurrence, same as it would for
+    `exact-label`/`embedding-nn` losing their own store state."""
 
     def __init__(self, embedder: Embedder, concept_store: ConceptStore):
         self.embedder = embedder
@@ -56,8 +67,14 @@ class StemmedLabelResolver(Resolver):
         for scored_mention, label in zip(scored_mentions, labels):
             stem = self._stem(label)
             concept_id = self._concept_id_by_stem.get(stem)
-            existing = self.concept_store.get(concept_id) if concept_id is not None else None
+            if concept_id is None:
+                concept_id = str(uuid.uuid5(uuid.NAMESPACE_URL, f"lattice:concept:{stem}"))
+            # Cache miss must fall through to a real store lookup -- the
+            # cache is a lookup-speed optimization, never the existence gate
+            # (see class docstring: this is what keeps Engine.load() safe).
+            existing = self.concept_store.get(concept_id)
             if existing is not None:
+                self._concept_id_by_stem[stem] = concept_id
                 updated = replace(existing, updated_at=document.id)
                 self.concept_store.upsert(updated)
                 resolutions.append(
@@ -65,14 +82,14 @@ class StemmedLabelResolver(Resolver):
                 )
             else:
                 concept = Concept(
-                    id=str(uuid.uuid5(uuid.NAMESPACE_URL, f"lattice:concept:{stem}")),
+                    id=concept_id,
                     label=label,
                     embedding=vectors[label],
                     first_seen=document.id,
                     updated_at=document.id,
                 )
                 self.concept_store.upsert(concept)
-                self._concept_id_by_stem[stem] = concept.id
+                self._concept_id_by_stem[stem] = concept_id
                 resolutions.append(
                     Resolution(concept=concept, mention=scored_mention, is_new=True)
                 )
