@@ -67,68 +67,63 @@
   "metrics": {
     "edge-f1": {
       "f1": {
-        "bca": {
-          "hi": 0.30000000000000004,
-          "lo": 0.29411764705882354,
-          "method": "bca"
-        },
+        "brackets_estimate": true,
         "estimate": 0.2991202346041056,
-        "percentile": {
-          "hi": 0.30000000000000004,
-          "lo": 0.29411764705882354,
-          "method": "percentile"
+        "m": 90,
+        "n": 179,
+        "scheme": "subsample",
+        "subsample": {
+          "hi": 0.3000049286962443,
+          "lo": 0.29408962113900317,
+          "method": "subsample"
         }
       },
       "gold_edges": {
-        "bca": {
-          "hi": 261.0,
-          "lo": 261.0,
-          "method": "degenerate"
-        },
+        "brackets_estimate": true,
         "estimate": 261.0,
-        "percentile": {
+        "m": 90,
+        "n": 179,
+        "scheme": "subsample",
+        "subsample": {
           "hi": 261.0,
           "lo": 261.0,
-          "method": "percentile"
+          "method": "subsample"
         }
       },
       "precision": {
-        "bca": {
-          "hi": 0.6455696202531646,
-          "lo": 0.6329113924050633,
-          "method": "bca"
-        },
+        "brackets_estimate": true,
         "estimate": 0.6375,
-        "percentile": {
-          "hi": 0.6455696202531646,
-          "lo": 0.6329113924050633,
-          "method": "percentile"
+        "m": 90,
+        "n": 179,
+        "scheme": "subsample",
+        "subsample": {
+          "hi": 0.6456148285634937,
+          "lo": 0.6328856857187978,
+          "method": "subsample"
         }
       },
       "predicted_edges": {
-        "bca": {
-          "hi": 80.0,
-          "lo": 78.0,
-          "method": "bca"
-        },
+        "brackets_estimate": true,
         "estimate": 80.0,
-        "percentile": {
+        "m": 90,
+        "n": 179,
+        "scheme": "subsample",
+        "subsample": {
           "hi": 80.0,
-          "lo": 78.0,
-          "method": "percentile"
+          "lo": 77.98879543053803,
+          "method": "subsample"
         }
       },
       "recall": {
-        "bca": {
-          "hi": 0.19540229885057472,
-          "lo": 0.19157088122605365,
-          "method": "bca"
-        },
+        "brackets_estimate": true,
         "estimate": 0.19540229885057472,
-        "percentile": {
+        "m": 90,
+        "n": 179,
+        "scheme": "subsample",
+        "subsample": {
           "hi": 0.19540229885057472,
-          "lo": 0.19157088122605365,
-          "method": "percentile"
+          "lo": 0.19154941653359775,
+          "method": "subsample"
         }
       }
     }
