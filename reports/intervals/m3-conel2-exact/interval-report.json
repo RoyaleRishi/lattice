@@ -58,55 +58,51 @@
   "metrics": {
     "clustering": {
       "ari": {
-        "bca": {
-          "hi": 0.9302801901992115,
-          "lo": 0.802178941392462,
-          "method": "percentile-fallback"
-        },
+        "brackets_estimate": true,
         "estimate": 0.760493423391469,
-        "percentile": {
-          "hi": 0.9302801901992115,
-          "lo": 0.802178941392462,
-          "method": "percentile"
+        "m": 29,
+        "n": 58,
+        "scheme": "subsample",
+        "subsample": {
+          "hi": 0.8621777551057088,
+          "lo": 0.6510622365841136,
+          "method": "subsample"
         }
       },
       "b3-f1": {
-        "bca": {
-          "hi": 0.9442232268140278,
-          "lo": 0.9204144312732873,
-          "method": "bca"
-        },
+        "brackets_estimate": true,
         "estimate": 0.9386176268204307,
-        "percentile": {
-          "hi": 0.9621624243059742,
-          "lo": 0.932573644109624,
-          "method": "percentile"
+        "m": 29,
+        "n": 58,
+        "scheme": "subsample",
+        "subsample": {
+          "hi": 0.9648871913429525,
+          "lo": 0.9339979617798475,
+          "method": "subsample"
         }
       },
       "b3-precision": {
-        "bca": {
-          "hi": 1.0,
-          "lo": 0.9917920643888252,
-          "method": "bca"
-        },
+        "brackets_estimate": true,
         "estimate": 0.9977876106194691,
-        "percentile": {
+        "m": 29,
+        "n": 58,
+        "scheme": "subsample",
+        "subsample": {
           "hi": 1.0,
-          "lo": 0.9949152542372882,
-          "method": "percentile"
+          "lo": 0.9952380952380953,
+          "method": "subsample"
         }
       },
       "b3-recall": {
-        "bca": {
-          "hi": 0.8971364783723794,
-          "lo": 0.8537973078178261,
-          "method": "bca"
-        },
+        "brackets_estimate": true,
         "estimate": 0.8860724820901811,
-        "percentile": {
-          "hi": 0.9279411194812806,
-          "lo": 0.8745151745054023,
-          "method": "percentile"
+        "m": 29,
+        "n": 58,
+        "scheme": "subsample",
+        "subsample": {
+          "hi": 0.93317230273752,
+          "lo": 0.8770561406380732,
+          "method": "subsample"
         }
       }
     }
