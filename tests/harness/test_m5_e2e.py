@@ -5,7 +5,13 @@ from lattice.harness.runner import ExperimentConfig, run_experiment
 from lattice.harness.sweep import SweepConfig, expand
 
 ROOT = "tests/fixtures/mini_clusters_conel"
-REDUNDANCY_KEYS = {"duplicate-rate", "near-duplicate-pairs", "concept-count"}
+REDUNDANCY_KEYS = {
+    "duplicate-rate",
+    "near-duplicate-pairs",
+    "concept-count",
+    "cosine-duplicate-pairs",
+    "label-duplicate-pairs",
+}
 SANITY_KEYS = {
     "cycle-components", "cycle-nodes", "self-loops",
     "max-depth", "transitive-shortcuts", "is-a-edges",

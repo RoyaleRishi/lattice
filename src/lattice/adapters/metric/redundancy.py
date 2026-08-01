@@ -25,7 +25,16 @@ class Redundancy(Metric, Resamplable):
     §4.1): what the resolver failed to merge. Two concepts are
     near-duplicates when their stored embeddings' cosine >= threshold or
     their normalized labels collide. O(n²) pairwise scan — fine at this
-    scale (top-k selection bounds concepts to the low thousands)."""
+    scale (top-k selection bounds concepts to the low thousands).
+
+    Circularity warning: if this metric's `threshold` is set >= the
+    `embedding-nn` resolver's threshold, the cosine criterion is vacuous by
+    construction. The resolver already merges any pair whose cosine meets
+    its own threshold, so no such pair can survive into the snapshot for
+    this metric to flag — `cosine-duplicate-pairs` is guaranteed to be 0
+    and only the label criterion carries signal. Configs must set this
+    metric's threshold **below** the resolver's threshold for the cosine
+    criterion to measure anything the resolver did not already guarantee."""
 
     kind = "holistic"
 
@@ -39,19 +48,26 @@ class Redundancy(Metric, Resamplable):
         count = len(concepts)
         norms = [_normalize(concept.label) for concept in concepts]
         pairs = 0
+        cosine_pairs = 0
+        label_pairs = 0
         has_duplicate = [False] * count
         for i in range(count):
             for j in range(i + 1, count):
-                near = (
-                    norms[i] == norms[j]
-                    or cosine(concepts[i].embedding, concepts[j].embedding)
-                    >= self.threshold
+                label_match = norms[i] == norms[j]
+                cosine_match = (
+                    cosine(concepts[i].embedding, concepts[j].embedding) >= self.threshold
                 )
-                if near:
+                if label_match:
+                    label_pairs += 1
+                if cosine_match:
+                    cosine_pairs += 1
+                if label_match or cosine_match:
                     pairs += 1
                     has_duplicate[i] = has_duplicate[j] = True
         return {
             "duplicate-rate": (sum(has_duplicate) / count) if count else 0.0,
             "near-duplicate-pairs": float(pairs),
             "concept-count": float(count),
+            "cosine-duplicate-pairs": float(cosine_pairs),
+            "label-duplicate-pairs": float(label_pairs),
         }

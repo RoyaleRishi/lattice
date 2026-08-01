@@ -45,8 +45,14 @@ name = "mention-clusters"
 root = "data/ecbplus"
 split = "test"
 
+# redundancy threshold set below the resolver's 0.90 (see [resolver.params]
+# above): if the metric threshold were >= the resolver's, the resolver would
+# already have merged every pair the metric could flag by cosine, making
+# cosine-duplicate-pairs vacuously 0 (see Redundancy's circularity warning).
+# 0.80 measures pairs the resolver did not already guarantee to merge.
 [[metrics]]
 name = "redundancy"
+params = { threshold = 0.80 }
 
 [[metrics]]
 name = "hierarchy-sanity"

@@ -40,8 +40,16 @@ name = "mention-clusters"
 root = "data/multiwoz"
 split = "test"
 
+# redundancy threshold set below every point on the [axes].resolver threshold
+# axis (0.90, 0.75, 0.65 below): if the metric threshold sat at or above any
+# axis value, that resolver arm would already have merged every pair the
+# metric could flag by cosine at that arm, making cosine-duplicate-pairs
+# vacuously 0 for that run (see Redundancy's circularity warning). 0.60 stays
+# below the lowest axis point (0.65) so the cosine criterion measures
+# something the resolver did not already guarantee, at every arm.
 [[base.metrics]]
 name = "redundancy"
+params = { threshold = 0.60 }
 
 [[base.metrics]]
 name = "hierarchy-sanity"

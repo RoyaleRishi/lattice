@@ -93,4 +93,45 @@ def test_empty_snapshot_is_all_zeros():
         "duplicate-rate": 0.0,
         "near-duplicate-pairs": 0.0,
         "concept-count": 0.0,
+        "cosine-duplicate-pairs": 0.0,
+        "label-duplicate-pairs": 0.0,
     }
+
+
+def test_cosine_only_pair_increments_cosine_key_not_label_key():
+    result = Redundancy().evaluate(
+        _snapshot(
+            _concept("c1", "alpha", (1.0, 0.0)),
+            _concept("c2", "zeta", (1.0, 0.0)),
+        ),
+        {},
+    )
+    assert result["cosine-duplicate-pairs"] == 1.0
+    assert result["label-duplicate-pairs"] == 0.0
+    assert result["near-duplicate-pairs"] == 1.0
+
+
+def test_label_only_pair_increments_label_key_not_cosine_key():
+    result = Redundancy().evaluate(
+        _snapshot(
+            _concept("c1", "the beatles", (1.0, 0.0)),
+            _concept("c2", "beatles", (0.0, 1.0)),
+        ),
+        {},
+    )
+    assert result["label-duplicate-pairs"] == 1.0
+    assert result["cosine-duplicate-pairs"] == 0.0
+    assert result["near-duplicate-pairs"] == 1.0
+
+
+def test_pair_meeting_both_criteria_increments_both_keys_and_counts_once():
+    result = Redundancy().evaluate(
+        _snapshot(
+            _concept("c1", "the beatles", (1.0, 0.0)),
+            _concept("c2", "beatles", (1.0, 0.0)),
+        ),
+        {},
+    )
+    assert result["cosine-duplicate-pairs"] == 1.0
+    assert result["label-duplicate-pairs"] == 1.0
+    assert result["near-duplicate-pairs"] == 1.0
