@@ -136,8 +136,11 @@ class Engine:
     def save(self, path: str | Path) -> None:
         """Serialize the accreted graph + config to versioned JSON (format
         v1, M6 spec §4.3). The concept store is not serialized separately:
-        resolvers upsert exactly the concepts the integrator holds, so the
-        snapshot is the single source of truth."""
+        resolvers upsert exactly the concepts the integrator holds — true
+        because Orchestrator.process rolls the concept store back to its
+        pre-document checkpoint whenever a document fails under
+        on_error="skip", so a failed document's mutations never linger in
+        the store — so the snapshot is the single source of truth."""
         from lattice import __version__  # inside the function: no cycle
 
         snapshot = self._orchestrator.snapshot()

@@ -43,3 +43,11 @@ class InMemoryConceptStore(ConceptStore):
     def reset(self) -> None:
         self._by_id.clear()
         self._id_by_label.clear()
+
+    def checkpoint(self) -> object:
+        return (dict(self._by_id), dict(self._id_by_label))
+
+    def rollback(self, token: object) -> None:
+        by_id, id_by_label = token
+        self._by_id = dict(by_id)
+        self._id_by_label = dict(id_by_label)

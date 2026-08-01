@@ -51,3 +51,17 @@ class ConceptStoreContract:
         assert store.all() == []
         assert store.get("c1") is None
         assert store.find_by_label("vector store") is None
+
+    def test_checkpoint_then_rollback_restores_original_contents(self):
+        store = self.make_store()
+        original = make_concept(id="c1", label="vector store")
+        store.upsert(original)
+        token = store.checkpoint()
+
+        store.upsert(make_concept(id="c2", label="new concept"))
+        store.rollback(token)
+
+        assert store.all() == [original]
+        assert store.get("c2") is None
+        assert store.find_by_label("new concept") is None
+        assert store.get("c1") == original

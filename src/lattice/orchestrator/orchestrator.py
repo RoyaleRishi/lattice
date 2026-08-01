@@ -22,8 +22,12 @@ class Orchestrator:
     Error policy (spec §8): "fail" re-raises the stage exception (a crash
     never silently shrinks the scored corpus); "skip" records the error in
     the GraphDelta and moves on (one poison document can't halt the stream).
-    Under "skip", stages that mutated their stores before the failing stage
-    keep those mutations — transactional deltas are deferred past M1.
+    Under "skip", the concept store is checkpointed before the pipeline runs
+    and rolled back if a later stage (e.g. the relation inducer) raises, so
+    a document that fails after the resolver has already upserted concepts
+    can never leave the store diverged from the graph. The graph integrator
+    is the last stage and runs only once every earlier stage has succeeded,
+    so it needs no checkpoint of its own.
     """
 
     def __init__(
@@ -46,6 +50,12 @@ class Orchestrator:
         self.on_error = on_error
 
     def process(self, document: Document) -> GraphDelta:
+        checkpoint = None
+        store = None
+        if self.on_error == "skip":
+            store = getattr(self.resolver, "concept_store", None)
+            if store is not None:
+                checkpoint = store.checkpoint()
         try:
             units = self.segmenter.segment(document)
             mentions = self.extractor.extract(units)
@@ -57,6 +67,8 @@ class Orchestrator:
         except Exception as exc:
             if self.on_error == "fail":
                 raise
+            if store is not None:
+                store.rollback(checkpoint)
             return GraphDelta(
                 document_id=document.id,
                 concepts_added=(),

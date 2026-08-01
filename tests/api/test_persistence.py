@@ -7,10 +7,52 @@ import json
 import pytest
 
 from lattice import Engine
+from lattice.ports import RelationInducer
 
 TEXT_A = "Olive oil is a fat prized in Mediterranean cooking."
 TEXT_B = "Mediterranean groves grow olive trees for oil."
 TEXT_C = "Olive presses yield fresh oil each autumn."
+
+KUBE_A = "Alpha discusses kubernetes orchestration."
+KUBE_B = "Beta mentions kubernetes again."
+KUBE_C = "Gamma revisits kubernetes deployments again."
+
+_KUBERNETES_CONFIG = {
+    "segmenter": {"name": "block"},
+    "extractor": {"name": "token"},
+    "scorer": {"name": "embedding-cosine"},
+    "resolver": {"name": "embedding-nn", "params": {"threshold": 0.99}},
+    "relation_inducer": {"name": "hearst"},
+    "graph_integrator": {"name": "in-memory"},
+    "embedder": {"name": "hashing"},
+    "concept_store": {"name": "in-memory"},
+    "run": {"on_error": "skip", "seed": 0},
+}
+
+
+class _FailOnBeta(RelationInducer):
+    """Wraps a real inducer but raises for the one document that mentions
+    "Beta" — forcing a mid-pipeline failure *after* the resolver has already
+    upserted concepts into the store, which is what exposes the
+    store/graph divergence this fix closes."""
+
+    def __init__(self, inner: RelationInducer):
+        self._inner = inner
+
+    def induce(self, resolutions, units, document):
+        if "Beta" in document.text:
+            raise RuntimeError("boom-on-beta")
+        return self._inner.induce(resolutions, units, document)
+
+
+def _make_flaky_kubernetes_engine() -> Engine:
+    """Engine wired per the task-3 regression scenario, with its relation
+    inducer swapped for one that fails only on the "Beta" document."""
+    engine = Engine.from_config(_KUBERNETES_CONFIG)
+    engine._orchestrator.relation_inducer = _FailOnBeta(
+        engine._orchestrator.relation_inducer
+    )
+    return engine
 
 
 def test_resume_equivalence(tmp_path):
@@ -24,6 +66,24 @@ def test_resume_equivalence(tmp_path):
     interrupted.save(path)
     resumed = Engine.load(path)
     resumed.ingest(TEXT_C)
+
+    assert resumed.snapshot() == straight.snapshot()
+
+
+def test_resume_equivalence_holds_when_a_document_fails_mid_pipeline(tmp_path):
+    """Regression for task 3: under on_error="skip", a document that fails
+    after the resolver has mutated the concept store (here, in the relation
+    inducer) must not leave the store diverged from the graph. Before the
+    fix, ingest(A,B,C) and ingest(A,B); save; load; ingest(C) disagreed."""
+    straight = _make_flaky_kubernetes_engine()
+    straight.ingest_all([KUBE_A, KUBE_B, KUBE_C])
+
+    interrupted = _make_flaky_kubernetes_engine()
+    interrupted.ingest_all([KUBE_A, KUBE_B])
+    path = tmp_path / "memory.json"
+    interrupted.save(path)
+    resumed = Engine.load(path)
+    resumed.ingest(KUBE_C)
 
     assert resumed.snapshot() == straight.snapshot()
 

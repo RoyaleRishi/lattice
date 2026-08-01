@@ -26,3 +26,15 @@ class ConceptStore(ABC):
 
     @abstractmethod
     def reset(self) -> None: ...
+
+    @abstractmethod
+    def checkpoint(self) -> object:
+        """Return an opaque snapshot token of the current state, for
+        rollback() to restore later (the skip-path recovery in
+        Orchestrator.process)."""
+        ...
+
+    @abstractmethod
+    def rollback(self, token: object) -> None:
+        """Restore state to a token previously returned by checkpoint()."""
+        ...

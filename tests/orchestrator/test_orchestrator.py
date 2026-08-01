@@ -9,7 +9,7 @@ from lattice.adapters.resolver.exact_label import ExactLabelResolver
 from lattice.adapters.scorer.frequency import FrequencyScorer
 from lattice.adapters.segmenter.block import BlockSegmenter
 from lattice.orchestrator.orchestrator import Orchestrator
-from lattice.ports import Extractor
+from lattice.ports import Extractor, RelationInducer
 from tests.helpers import make_document
 
 
@@ -32,6 +32,15 @@ def build_orchestrator(**overrides) -> Orchestrator:
 class ExplodingExtractor(Extractor):
     def extract(self, units):
         raise RuntimeError("boom")
+
+
+class ExplodingRelationInducer(RelationInducer):
+    """Fails after the resolver has already run, unlike ExplodingExtractor
+    (which fails before the resolver mutates anything) — the case that
+    exposed the store/graph divergence this test guards against."""
+
+    def induce(self, resolutions, units, document):
+        raise RuntimeError("boom-in-relations")
 
 
 def test_process_returns_delta_with_new_concepts():
@@ -124,3 +133,24 @@ def test_skip_path_has_no_selected_mentions():
     orchestrator = build_orchestrator(extractor=ExplodingExtractor(), on_error="skip")
     delta = orchestrator.process(make_document(id="d1"))
     assert delta.selected_mentions == ()
+
+
+def test_on_error_skip_rolls_back_concept_store_when_relation_inducer_fails():
+    """The resolver upserts into the concept store before the relation
+    inducer runs. If the inducer then raises, the store must end up
+    byte-identical to its pre-document state, not just the returned delta
+    empty — otherwise the store and graph diverge (spec-enforced
+    resume-equivalence breaks)."""
+    orchestrator = build_orchestrator(
+        relation_inducer=ExplodingRelationInducer(), on_error="skip"
+    )
+    orchestrator.process(make_document(id="d0", text="vector store"))
+    store = orchestrator.resolver.concept_store
+    before = sorted(store.all(), key=lambda c: c.id)
+
+    delta = orchestrator.process(make_document(id="d1", text="new mention encoder"))
+
+    assert len(delta.errors) == 1
+    assert sorted(store.all(), key=lambda c: c.id) == before
+    assert store.find_by_label("encoder") is None
+    assert store.find_by_label("mention") is None
