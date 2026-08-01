@@ -105,6 +105,52 @@ def test_paired_deltas_reject_arms_that_enumerate_documents_differently(monkeypa
         ia.m3_paired_deltas("conel2")
 
 
+def _delta_row(corpus: str, pair: str, prob_positive: float, samples: int = 10000) -> dict:
+    return {
+        "corpus": corpus, "pair": pair, "delta_estimate": 0.01, "ci_lo": 0.001,
+        "ci_hi": 0.02, "prob_positive": prob_positive, "samples": samples,
+    }
+
+
+def test_monte_carlo_p_never_reports_zero_for_a_saturated_probability():
+    # P == 1.0 means no draw out of B fell the other way, not certainty. The
+    # (r + 1) / (B + 1) correction floors the two-sided p at 2 / (B + 1).
+    p, at_floor = ia._monte_carlo_two_sided_p(1.0, 10000)
+    assert at_floor and p == pytest.approx(2 / 10001)
+    # ...and symmetrically at the other end.
+    assert ia._monte_carlo_two_sided_p(0.0, 10000) == (pytest.approx(2 / 10001), True)
+    # An unsaturated cell is not at the floor and is close to 2 * min(P, 1 - P).
+    p, at_floor = ia._monte_carlo_two_sided_p(0.9864, 10000)
+    assert not at_floor and p == pytest.approx(2 * 137 / 10001)
+
+
+def test_holm_step_down_kills_every_comparison_after_the_first_failure():
+    # Ranks 1-4 clear their thresholds; rank 5 (p = 0.0274 > 0.05/2 = 0.025)
+    # fails, and rank 6 must fail with it even though 0.0370 <= 0.05/1.
+    rows = [
+        _delta_row("conel2", "nn - stemmed", 0.0184),    # p ~ 0.0370, rank 6
+        _delta_row("conel2", "nn - exact", 0.9864),      # p ~ 0.0274, rank 5
+        _delta_row("conel2", "stemmed - exact", 1.0),
+        _delta_row("ecbplus", "nn - exact", 1.0),
+        _delta_row("ecbplus", "stemmed - exact", 0.9997),
+        _delta_row("ecbplus", "nn - stemmed", 0.9986),
+    ]
+    result = ia.holm_correction(rows)
+    assert result["family_size"] == 6 and result["alpha"] == 0.05
+    by_pair = {(e["corpus"], e["pair"]): e for e in result["comparisons"]}
+    assert by_pair[("conel2", "nn - exact")]["survives_holm"] is False
+    last = by_pair[("conel2", "nn - stemmed")]
+    assert last["survives_holm"] is False
+    assert last["p_two_sided"] <= last["holm_threshold"]  # would pass alone; step-down kills it
+    for key in [("conel2", "stemmed - exact"), ("ecbplus", "nn - exact"),
+                ("ecbplus", "stemmed - exact"), ("ecbplus", "nn - stemmed")]:
+        assert by_pair[key]["survives_holm"] is True
+    # adjusted p is monotone in rank
+    ranked = sorted(result["comparisons"], key=lambda e: e["holm_rank"])
+    adjusted = [e["p_adjusted"] for e in ranked]
+    assert adjusted == sorted(adjusted)
+
+
 def test_threshold_curve_uses_the_subsample_interval_not_bca(fast):
     rows = ia.m3_threshold_curve("conel2")
     assert [r["threshold"] for r in rows] == ia.THRESHOLD_GRID

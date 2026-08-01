@@ -12,8 +12,9 @@ an out-of-sample replication check of the resolver-improvement claim.
 
     uv run --no-sync python scripts/interval_analysis.py [out_dir]
 
-Writes JSON to <out_dir>/{m3-paired-delta,m3-threshold-curve,permutation-spread}.json
-(gitignored, regenerable) and prints a human-readable summary to stdout.
+Writes JSON to
+<out_dir>/{m3-paired-delta,m3-multiplicity,m3-threshold-curve,permutation-spread}.json
+and prints a human-readable summary to stdout.
 
 Scheme: `clustering` is a *pooled* metric — B³ and ARI score a cross-document
 pool of mentions, so they are degree-2 functionals and a with-replacement draw
@@ -55,6 +56,7 @@ POOLED_SCHEME = "subsample"  # `clustering` is a pooled metric; see the module d
 PERMUTATIONS = 40
 PERMUTATION_SEED = 1
 LEVEL = 0.95
+HOLM_ALPHA = 0.05  # family-wise error rate over the six M3 paired comparisons
 THRESHOLD_GRID = [0.65, 0.70, 0.75, 0.80, 0.85, 0.90, 0.95]
 OPERATING_THRESHOLD = 0.90  # pre-registered on ConEL-2 in M5; applied uniformly, not re-tuned
 
@@ -166,6 +168,85 @@ def m3_paired_deltas(corpus: str) -> list[dict]:
     return rows
 
 
+def _monte_carlo_two_sided_p(prob_positive: float, samples: int) -> tuple[float, bool]:
+    """Two-sided p-value for one paired delta, read off its Monte Carlo
+    `prob_positive` rather than from an asymptotic reference distribution.
+
+    NOT `2 * min(P, 1 - P)`. `prob_positive` is the fraction of B rescaled
+    paired draws above zero, so it is itself an estimate with a resolution
+    floor: P == 1.0 does not mean p == 0, it means *no* draw out of B landed on
+    the other side, which is only evidence that the one-sided tail is below
+    roughly 1 / B. The standard Monte Carlo p-value (Davison & Hinkley 1997
+    §4.2) adds one notional exceedance to numerator and denominator,
+
+        p_one_sided = (r + 1) / (B + 1)
+
+    with r the count on the near side, which is exactly the conservative
+    correction that keeps a zero-exceedance cell from being quoted as
+    certainty. At the script's B = 10000 the floor is p_two >= 2 / 10001 ~=
+    2.0e-4, and any row reported at it must be published as "< 2e-4", never as
+    zero. Returns (p_two_sided, at_floor)."""
+    positives = round(prob_positive * samples)
+    near_side = min(positives, samples - positives)
+    return min(1.0, 2 * (near_side + 1) / (samples + 1)), near_side == 0
+
+
+def holm_correction(delta_rows: list[dict], *, alpha: float = HOLM_ALPHA) -> dict:
+    """Holm-Bonferroni step-down over the *whole* family of M3 paired deltas.
+
+    The six comparisons (three pairwise deltas x two corpora) are read jointly
+    — the published claim is about the shape of the identity ladder, not about
+    any single pre-registered pair — so the family-wise error rate is the
+    relevant control and the per-comparison 95% CIs are not sufficient on their
+    own. Holm is used rather than plain Bonferroni because it is uniformly more
+    powerful at the same FWER and makes no independence assumption, which
+    matters here: the six deltas are heavily dependent (three of them are
+    differences among the same three arms on the same corpus, and they satisfy
+    an exact additive identity).
+
+    Step-down: sort the p-values ascending, compare the i-th (1-indexed) to
+    alpha / (k - i + 1), and stop at the first failure — every larger p-value
+    fails with it regardless of its own threshold. `survives_holm` encodes that
+    stop, so it is not simply `p <= threshold` row by row."""
+    entries = []
+    for row in delta_rows:
+        p, at_floor = _monte_carlo_two_sided_p(row["prob_positive"], row["samples"])
+        entries.append({
+            "corpus": row["corpus"],
+            "pair": row["pair"],
+            "delta_estimate": row["delta_estimate"],
+            "ci_lo": row["ci_lo"],
+            "ci_hi": row["ci_hi"],
+            "prob_positive": row["prob_positive"],
+            "samples": row["samples"],
+            "p_two_sided": p,
+            "at_monte_carlo_floor": at_floor,
+        })
+    order = sorted(range(len(entries)), key=lambda i: entries[i]["p_two_sided"])
+    k = len(entries)
+    still_rejecting = True
+    running_max = 0.0
+    for rank, i in enumerate(order):
+        entry = entries[i]
+        threshold = alpha / (k - rank)
+        still_rejecting = still_rejecting and entry["p_two_sided"] <= threshold
+        # Holm-adjusted p, made monotone in rank (the standard step-down form).
+        running_max = max(running_max, min(1.0, (k - rank) * entry["p_two_sided"]))
+        entry |= {
+            "holm_rank": rank + 1,
+            "holm_threshold": threshold,
+            "p_adjusted": running_max,
+            "survives_holm": still_rejecting,
+        }
+    return {
+        "alpha": alpha,
+        "family_size": k,
+        "method": "holm-bonferroni step-down, two-sided Monte Carlo p from prob_positive",
+        "monte_carlo_p_floor": 2 / (entries[0]["samples"] + 1) if entries else None,
+        "comparisons": entries,
+    }
+
+
 def m3_threshold_curve(corpus: str) -> list[dict]:
     """b3-f1 estimate + m-out-of-n subsampling CI at each threshold in
     THRESHOLD_GRID, 0.90 marked as the pre-registered (not re-tuned) operating
@@ -236,8 +317,8 @@ def run_all() -> dict:
         )
     # M5: fixed_prefix=0, the full-real holistic pipeline.
     permutations.append(permutation_spread(M5_CONFIG, fixed_prefix=0, label="m5-conel2-nn090"))
-    return {"m3_paired_delta": m3_delta, "m3_threshold_curve": m3_curve,
-            "permutation_spread": permutations}
+    return {"m3_paired_delta": m3_delta, "m3_multiplicity": holm_correction(m3_delta),
+            "m3_threshold_curve": m3_curve, "permutation_spread": permutations}
 
 
 def _print_summary(results: dict) -> None:
@@ -249,6 +330,23 @@ def _print_summary(results: dict) -> None:
             f"delta={row['delta_estimate']:+.4f} "
             f"95% CI=[{row['ci_lo']:+.4f}, {row['ci_hi']:+.4f}] "
             f"prob_positive={row['prob_positive']:.4f} (m={row['m']}, n={row['n']})"
+        )
+    holm = results["m3_multiplicity"]
+    print(
+        f"\n=== M3 multiplicity: Holm-Bonferroni, alpha={holm['alpha']}, "
+        f"k={holm['family_size']} (p floor {holm['monte_carlo_p_floor']:.2e}) ==="
+    )
+    for entry in sorted(holm["comparisons"], key=lambda e: e["holm_rank"]):
+        shown = (
+            f"<{holm['monte_carlo_p_floor']:.1e}"
+            if entry["at_monte_carlo_floor"]
+            else f"{entry['p_two_sided']:.4f}"
+        )
+        verdict = "SURVIVES" if entry["survives_holm"] else "fails"
+        print(
+            f"  {entry['holm_rank']}. {entry['corpus']:8s} {entry['pair']:<40s} "
+            f"p={shown:>8s} vs alpha/{holm['family_size'] - entry['holm_rank'] + 1} "
+            f"={entry['holm_threshold']:.5f} -> {verdict}"
         )
     print("\n=== M3 threshold-sensitivity curve (b3-f1, subsampling 95% CI) ===")
     for corpus, rows in results["m3_threshold_curve"].items():
@@ -273,6 +371,9 @@ def main() -> None:
     results = run_all()
     (out_dir / "m3-paired-delta.json").write_text(
         json.dumps(results["m3_paired_delta"], indent=2, sort_keys=True)
+    )
+    (out_dir / "m3-multiplicity.json").write_text(
+        json.dumps(results["m3_multiplicity"], indent=2, sort_keys=True)
     )
     (out_dir / "m3-threshold-curve.json").write_text(
         json.dumps(results["m3_threshold_curve"], indent=2, sort_keys=True)
