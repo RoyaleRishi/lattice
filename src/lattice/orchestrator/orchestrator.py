@@ -26,8 +26,11 @@ class Orchestrator:
     and rolled back if a later stage (e.g. the relation inducer) raises, so
     a document that fails after the resolver has already upserted concepts
     can never leave the store diverged from the graph. The graph integrator
-    is the last stage and runs only once every earlier stage has succeeded,
-    so it needs no checkpoint of its own.
+    itself is not checkpointed — that is sound today only because the
+    in-memory integrator's apply() cannot fail partway through (its two
+    loops are dict assignments over already-built values); a future
+    integrator with a fallible apply() (e.g. one doing I/O) would need its
+    own rollback, which the GraphIntegrator port does not require.
     """
 
     def __init__(
