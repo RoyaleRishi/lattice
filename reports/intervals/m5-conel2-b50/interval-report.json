@@ -32,7 +32,9 @@
     "metrics": [
       {
         "name": "redundancy",
-        "params": {}
+        "params": {
+          "threshold": 0.8
+        }
       },
       {
         "name": "hierarchy-sanity",
@@ -158,19 +160,35 @@
           "method": "percentile"
         }
       },
-      "duplicate-rate": {
-        "estimate": 0.015296367112810707,
+      "cosine-duplicate-pairs": {
+        "estimate": 78.0,
         "percentile": {
-          "hi": 0.02524637317452197,
+          "hi": 61.099999999999994,
+          "lo": 34.900000000000006,
+          "method": "percentile"
+        }
+      },
+      "duplicate-rate": {
+        "estimate": 0.25239005736137665,
+        "percentile": {
+          "hi": 0.2971713323460564,
+          "lo": 0.20051173081208418,
+          "method": "percentile"
+        }
+      },
+      "label-duplicate-pairs": {
+        "estimate": 4.0,
+        "percentile": {
+          "hi": 4.0,
           "lo": 0.0,
           "method": "percentile"
         }
       },
       "near-duplicate-pairs": {
-        "estimate": 4.0,
+        "estimate": 79.0,
         "percentile": {
-          "hi": 4.0,
-          "lo": 0.0,
+          "hi": 61.87499999999999,
+          "lo": 34.900000000000006,
           "method": "percentile"
         }
       }
