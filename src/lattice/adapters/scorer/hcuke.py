@@ -16,6 +16,21 @@ def _softmax(values: Sequence[float]) -> list[float]:
     return [e / total for e in exps]
 
 
+def _min_max(factor: dict[str, float]) -> dict[str, float]:
+    """Min-max normalize one Eq. (7) factor to [0, 1] over the candidate set.
+
+    A degenerate factor (every candidate equal, so a zero range) maps to 1.0
+    rather than 0/0: it carries no ranking information, so it must leave the
+    product unchanged instead of collapsing every score to zero."""
+    if not factor:
+        return {}
+    lowest = min(factor.values())
+    span = max(factor.values()) - lowest
+    if span == 0.0:
+        return dict.fromkeys(factor, 1.0)
+    return {key: (value - lowest) / span for key, value in factor.items()}
+
+
 @register(Scorer, "hcuke")
 class HCUKEScorer(Scorer):
     """HCUKE (Xu et al., Knowledge-Based Systems 304 (2024) 112511):
@@ -31,21 +46,41 @@ class HCUKEScorer(Scorer):
       prose would apply W(s) twice (it already sits inside Eq. (4)); Algorithm
       1 and the §3.3 worked example apply it once — we follow Algorithm 1.
     - Local significance (Eq. 6): R_l(c_i) = sum over ALL j (including j=i) of
-      (cos(H_ci, H_cj) - lambda * mu), mu = mean pairwise candidate similarity
-      over unique off-diagonal pairs. Algorithm 1 line 15's inner loop has no
+      (cos(H_ci, H_cj) - lambda * mu), with mu = (1/n) sum_i (1/n) sum_j
+      dist(H_ci, H_cj) as §3.4 defines it: the mean over all n^2 ORDERED
+      pairs, unit diagonal included. Algorithm 1 line 15's inner loop has no
       guard excluding j=i, so the self-comparison (cos(H_ci,H_ci)=1) is
       included by design -- a constant per candidate that, because the final
       score is a product (Eq. 7), contributes a term proportional to that
       candidate's own global significance and position weight rather than
       cancelling out.
-    - Final score (Eq. 7): R(c) = R_g(c) * R_l(c) * W(c); top_k unique
-      surfaces by (-score, surface).
+    - Normalization (not in the paper; see the deviations below): R_g, R_l and
+      W(c) are each min-max normalized to [0, 1] across the document's
+      candidates before Eq. (7) multiplies them, so that no factor can be
+      negative and none dominates by raw scale.
+    - Final score (Eq. 7): R(c) = R_g(c) * R_l(c) * W(c) over the normalized
+      factors; top_k unique surfaces by (-score, surface).
 
     Documented deviations: candidates, sentences, and documents are embedded
     as whole strings through the injected Embedder (paper: BERT token vectors
     + max-pooling); candidates come from the injected Extractor (paper:
     CoreNLP POS regex); word positions use whitespace tokens (paper: CoreNLP
-    tokens). denoise_lambda defaults to the paper's Inspec-tuned 1.3 (§4.2)."""
+    tokens). denoise_lambda defaults to the paper's Inspec-tuned 1.3 (§4.2).
+    The normalization step is ours in all but name: §3.4's only mention of it
+    is the phrase "simple filtering and normalization operations" (a contrast
+    with prior work's "complex filtering techniques"), and neither §3.4 nor
+    Algorithm 1 says what is normalized or how -- Algorithm 1 line 19 forms
+    the Eq. (7) product from the raw R_g, R_l and W_c. Min-max per factor is
+    our reading, forced less by the text than by Eq. (7) being a product:
+    Eq. (6) subtracts lambda*mu n times, so raw R_l is negative for most
+    candidates at the paper's lambda=1.3, and a negative factor in a product
+    ranks the least central candidates first. One consequence is exact, not
+    merely approximate, insensitivity to denoise_lambda: -lambda*mu is the
+    same offset for every candidate, so min-max cancels it and neither lambda
+    nor mu can change a score. The paper's Fig. 3 shows F1@10 on Inspec moving
+    under one point as lambda sweeps 0 -> 1.5, so near-flatness is expected,
+    but flat-to-the-bit is ours; denoise_lambda is kept for config
+    compatibility and to keep the Eq. (6) trace visible."""
 
     def __init__(self, embedder: Embedder, top_k: int = 10, denoise_lambda: float = 1.3):
         self.embedder = embedder
@@ -93,18 +128,32 @@ class HCUKEScorer(Scorer):
             for i, a in enumerate(surfaces)
             for b in surfaces[i + 1 :]
         }
-        mu = sum(pair_sim.values()) / len(pair_sim) if pair_sim else 0.0
-        local_sig = {
+        # Row i of the candidate similarity matrix: sum_j dist(H_ci, H_cj) over
+        # all j, self-pair included at an exact 1.0 (no cosine(v, v) drift).
+        row_total = {
             s: sum(
-                (1.0 if other == s else pair_sim[(min(s, other), max(s, other))])
-                - self.denoise_lambda * mu
+                1.0 if other == s else pair_sim[(min(s, other), max(s, other))]
                 for other in surfaces
             )
             for s in surfaces
         }
+        # mu (§3.4) is the mean over all n^2 ordered pairs, diagonal included.
+        mu = sum(row_total.values()) / len(surfaces) ** 2
+        # Eq. (6): R_l(c_i) = sum_j (dist(H_ci, H_cj) - lambda*mu) = the row
+        # total less n identical offsets.
+        local_sig = {
+            s: total - len(surfaces) * self.denoise_lambda * mu
+            for s, total in row_total.items()
+        }
 
+        # Normalize each factor before the Eq. (7) product, so that no factor
+        # can be negative and none dominates by raw scale. Not in the paper --
+        # see the class docstring's deviations ledger for why it is needed.
+        norm_global = _min_max(global_sig)
+        norm_local = _min_max(local_sig)
+        norm_weight = _min_max(candidate_weight)
         salience = {
-            s: global_sig[s] * local_sig[s] * candidate_weight[s] for s in surfaces
+            s: norm_global[s] * norm_local[s] * norm_weight[s] for s in surfaces
         }
         ranked = sorted(salience.items(), key=lambda kv: (-kv[1], kv[0]))
         top_surfaces = {surface for surface, _ in ranked[: self.top_k]}
