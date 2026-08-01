@@ -34,7 +34,9 @@
         "metrics": [
           {
             "name": "redundancy",
-            "params": {}
+            "params": {
+              "threshold": 0.6
+            }
           },
           {
             "name": "hierarchy-sanity",
@@ -89,8 +91,10 @@
         },
         "redundancy": {
           "concept-count": 885.0,
-          "duplicate-rate": 0.3536723163841808,
-          "near-duplicate-pairs": 242.0
+          "cosine-duplicate-pairs": 8911.0,
+          "duplicate-rate": 0.9299435028248587,
+          "label-duplicate-pairs": 33.0,
+          "near-duplicate-pairs": 8911.0
         }
       }
     },
@@ -128,7 +132,9 @@
         "metrics": [
           {
             "name": "redundancy",
-            "params": {}
+            "params": {
+              "threshold": 0.6
+            }
           },
           {
             "name": "hierarchy-sanity",
@@ -185,8 +191,10 @@
         },
         "redundancy": {
           "concept-count": 724.0,
-          "duplicate-rate": 0.019337016574585635,
-          "near-duplicate-pairs": 7.0
+          "cosine-duplicate-pairs": 4198.0,
+          "duplicate-rate": 0.9102209944751382,
+          "label-duplicate-pairs": 7.0,
+          "near-duplicate-pairs": 4198.0
         }
       }
     },
@@ -224,7 +232,9 @@
         "metrics": [
           {
             "name": "redundancy",
-            "params": {}
+            "params": {
+              "threshold": 0.6
+            }
           },
           {
             "name": "hierarchy-sanity",
@@ -281,8 +291,10 @@
         },
         "redundancy": {
           "concept-count": 436.0,
-          "duplicate-rate": 0.0,
-          "near-duplicate-pairs": 0.0
+          "cosine-duplicate-pairs": 672.0,
+          "duplicate-rate": 0.7729357798165137,
+          "label-duplicate-pairs": 0.0,
+          "near-duplicate-pairs": 672.0
         }
       }
     },
@@ -320,7 +332,9 @@
         "metrics": [
           {
             "name": "redundancy",
-            "params": {}
+            "params": {
+              "threshold": 0.6
+            }
           },
           {
             "name": "hierarchy-sanity",
@@ -377,8 +391,10 @@
         },
         "redundancy": {
           "concept-count": 296.0,
-          "duplicate-rate": 0.0,
-          "near-duplicate-pairs": 0.0
+          "cosine-duplicate-pairs": 121.0,
+          "duplicate-rate": 0.40878378378378377,
+          "label-duplicate-pairs": 0.0,
+          "near-duplicate-pairs": 121.0
         }
       }
     }
@@ -443,7 +459,9 @@
       "metrics": [
         {
           "name": "redundancy",
-          "params": {}
+          "params": {
+            "threshold": 0.6
+          }
         },
         {
           "name": "hierarchy-sanity",
@@ -495,8 +513,10 @@
       "hierarchy-sanity.self-loops": 0.0,
       "hierarchy-sanity.transitive-shortcuts": 3.0,
       "redundancy.concept-count": 885.0,
-      "redundancy.duplicate-rate": 0.3536723163841808,
-      "redundancy.near-duplicate-pairs": 242.0
+      "redundancy.cosine-duplicate-pairs": 8911.0,
+      "redundancy.duplicate-rate": 0.9299435028248587,
+      "redundancy.label-duplicate-pairs": 33.0,
+      "redundancy.near-duplicate-pairs": 8911.0
     },
     {
       "axis:resolver": "embedding-nn",
@@ -511,8 +531,10 @@
       "hierarchy-sanity.self-loops": 0.0,
       "hierarchy-sanity.transitive-shortcuts": 5.0,
       "redundancy.concept-count": 724.0,
-      "redundancy.duplicate-rate": 0.019337016574585635,
-      "redundancy.near-duplicate-pairs": 7.0
+      "redundancy.cosine-duplicate-pairs": 4198.0,
+      "redundancy.duplicate-rate": 0.9102209944751382,
+      "redundancy.label-duplicate-pairs": 7.0,
+      "redundancy.near-duplicate-pairs": 4198.0
     },
     {
       "axis:resolver": "embedding-nn",
@@ -527,8 +549,10 @@
       "hierarchy-sanity.self-loops": 0.0,
       "hierarchy-sanity.transitive-shortcuts": 2.0,
       "redundancy.concept-count": 436.0,
-      "redundancy.duplicate-rate": 0.0,
-      "redundancy.near-duplicate-pairs": 0.0
+      "redundancy.cosine-duplicate-pairs": 672.0,
+      "redundancy.duplicate-rate": 0.7729357798165137,
+      "redundancy.label-duplicate-pairs": 0.0,
+      "redundancy.near-duplicate-pairs": 672.0
     },
     {
       "axis:resolver": "embedding-nn",
@@ -543,8 +567,10 @@
       "hierarchy-sanity.self-loops": 0.0,
       "hierarchy-sanity.transitive-shortcuts": 0.0,
       "redundancy.concept-count": 296.0,
-      "redundancy.duplicate-rate": 0.0,
-      "redundancy.near-duplicate-pairs": 0.0
+      "redundancy.cosine-duplicate-pairs": 121.0,
+      "redundancy.duplicate-rate": 0.40878378378378377,
+      "redundancy.label-duplicate-pairs": 0.0,
+      "redundancy.near-duplicate-pairs": 121.0
     }
   ]
 }
