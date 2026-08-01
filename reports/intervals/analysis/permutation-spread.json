@@ -354,17 +354,29 @@
         "range": 2.0,
         "std": 0.5894913061275798
       },
-      "redundancy.duplicate-rate": {
-        "max": 0.015296367112810707,
-        "min": 0.015238095238095238,
-        "range": 5.8271874715468824e-05,
-        "std": 1.7172336457519744e-05
+      "redundancy.cosine-duplicate-pairs": {
+        "max": 81.0,
+        "min": 77.0,
+        "range": 4.0,
+        "std": 1.0428326807307104
       },
-      "redundancy.near-duplicate-pairs": {
+      "redundancy.duplicate-rate": {
+        "max": 0.26285714285714284,
+        "min": 0.25047801147227533,
+        "range": 0.012379131384867514,
+        "std": 0.003319334949364151
+      },
+      "redundancy.label-duplicate-pairs": {
         "max": 4.0,
         "min": 4.0,
         "range": 0.0,
         "std": 0.0
+      },
+      "redundancy.near-duplicate-pairs": {
+        "max": 82.0,
+        "min": 78.0,
+        "range": 4.0,
+        "std": 1.0428326807307104
       }
     },
     "label": "m5-conel2-nn090",
