@@ -127,6 +127,38 @@ def test_coordination_walking():
     }
 
 
+def test_and_other_coordination_walks_backward():
+    text = "bruises, wounds, broken bones and other injuries."
+    surfaces = ["bruises", "wounds", "broken bones", "injuries"]
+    assert _edges(text, surfaces) == {
+        ("bruises", "injuries"),
+        ("wounds", "injuries"),
+        ("broken bones", "injuries"),
+    }
+
+
+def test_and_other_single_hyponym_unregressed():
+    assert _edges("olive oil and other fats.", ["olive oil", "fats"]) == {
+        ("olive oil", "fats")
+    }
+
+
+def test_such_as_forward_coordination_unregressed():
+    text = "fats such as olive oil, canola and margarine."
+    surfaces = ["fats", "olive oil", "canola", "margarine"]
+    assert _edges(text, surfaces) == {
+        ("olive oil", "fats"),
+        ("canola", "fats"),
+        ("margarine", "fats"),
+    }
+
+
+def test_and_other_backward_walk_stops_at_non_coordination_gap():
+    text = "bruises, we saw wounds and other injuries."
+    surfaces = ["bruises", "wounds", "injuries"]
+    assert _edges(text, surfaces) == {("wounds", "injuries")}
+
+
 def test_intervening_text_kills_the_match():
     assert _edges(
         "fats are found in stores such as delis, olive oil.", ["fats", "olive oil"]

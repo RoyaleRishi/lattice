@@ -12,8 +12,11 @@ _COORD = re.compile(r",\s+|,?\s+(?:and|or)\s+", re.IGNORECASE)
 class _Pattern:
     """One lexico-syntactic pattern: `connector` is fullmatched against the
     text between two adjacent anchor spans; `hyper` says which anchor is the
-    hypernym; `coordination` enables forward hyponym-list walking; `prefix`
-    (if set) must match immediately before the left anchor."""
+    hypernym; `coordination` enables hyponym-list walking away from the
+    paired hypo anchor, forward when `hyper == "left"` (hypernym precedes
+    the list) and backward when `hyper == "right"` (hypernym trails the
+    list, Hearst patterns 4/5); `prefix` (if set) must match immediately
+    before the left anchor."""
 
     __slots__ = ("name", "connector", "hyper", "coordination", "prefix")
 
@@ -40,8 +43,8 @@ _BUILTIN = [
     ),
     _Pattern("including", r",?\s+including\s+", hyper="left", coordination=True),
     _Pattern("especially", r",?\s+especially\s+", hyper="left", coordination=True),
-    _Pattern("and-other", r",?\s+and\s+other\s+", hyper="right"),
-    _Pattern("or-other", r",?\s+or\s+other\s+", hyper="right"),
+    _Pattern("and-other", r",?\s+and\s+other\s+", hyper="right", coordination=True),
+    _Pattern("or-other", r",?\s+or\s+other\s+", hyper="right", coordination=True),
     _Pattern(
         "copula", r"\s+(?:is|are)\s+an?\s+(?:(?:kind|type)\s+of\s+)?",
         hyper="right",
@@ -112,6 +115,8 @@ class HearstInducer(RelationInducer):
                             pairs += _walk_coordination(anchors, i + 1, left, text)
                     else:
                         pairs = [(left, right)]
+                        if pattern.coordination:
+                            pairs += _walk_coordination_backward(anchors, i, right, text)
                     for hypo, hyper in pairs:
                         edge = (hypo.concept.id, hyper.concept.id)
                         if edge[0] == edge[1] or edge in seen:
@@ -143,4 +148,22 @@ def _walk_coordination(
         if not _COORD.fullmatch(text[previous_end:next_start]):
             break
         pairs.append((anchors[j + 1], hyper))
+    return pairs
+
+
+def _walk_coordination_backward(
+    anchors: list[Resolution], last_hypo: int, hyper: Resolution, text: str
+) -> list[tuple[Resolution, Resolution]]:
+    """After `anchors[last_hypo] CONN hyper` (hypernym trailing the list, as
+    in Hearst patterns 4/5: "X, Y and other Z"), keep consuming preceding
+    anchors while they are separated only by coordination glue."""
+    pairs: list[tuple[Resolution, Resolution]] = []
+    for j in range(last_hypo, 0, -1):
+        previous_end = anchors[j - 1].mention.mention.span[1]
+        next_start = anchors[j].mention.mention.span[0]
+        if next_start < previous_end:
+            break
+        if not _COORD.fullmatch(text[previous_end:next_start]):
+            break
+        pairs.append((anchors[j - 1], hyper))
     return pairs
