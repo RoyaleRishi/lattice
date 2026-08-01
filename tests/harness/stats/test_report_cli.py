@@ -1,7 +1,7 @@
 import json
 
 from lattice.harness.runner import ExperimentConfig
-from lattice.harness.stats.report import analyze, write_report
+from lattice.harness.stats.report import _subsample_iv, analyze, write_report
 
 CFG = ExperimentConfig.model_validate({
     "segmenter": {"name": "block"},
@@ -48,11 +48,12 @@ def test_analyze_item_level_shape_and_centering():
     # edge-f1 is pooled -> m-out-of-n subsampling, and no bca/percentile entry:
     # both of those read the draws as a full-size bootstrap distribution, which
     # is precisely the construction that produced non-bracketing M4 intervals.
-    assert set(f1) == {"estimate", "subsample", "scheme", "m", "n"}
+    assert set(f1) == {"estimate", "subsample", "scheme", "m", "n", "brackets_estimate"}
     assert set(f1["subsample"]) == {"lo", "hi", "method"}
     assert f1["subsample"]["method"] == "subsample"
     assert (f1["scheme"], f1["m"], f1["n"]) == ("subsample", 2, 3)
     assert f1["subsample"]["lo"] <= f1["estimate"] <= f1["subsample"]["hi"]
+    assert f1["brackets_estimate"] is True
 
 
 def test_analyze_macro_metric_keeps_the_bootstrap_and_bca():
@@ -61,9 +62,14 @@ def test_analyze_macro_metric_keeps_the_bootstrap_and_bca():
     # remain correct and must not be switched to subsampling.
     report = analyze(MACRO_CFG, samples=200, seed=5, level=0.95)
     entry = report["metrics"]["f1-at-k"]["f1@5"]
-    assert set(entry) == {"estimate", "bca", "percentile", "scheme", "m", "n"}
+    assert set(entry) == {
+        "estimate", "bca", "percentile", "scheme", "m", "n", "brackets_estimate"
+    }
     assert entry["scheme"] == "resample"
     assert entry["m"] == entry["n"] == 3       # mini_inspec has three documents
+    # BCa already falls back rather than report a non-bracketing band, so the
+    # flag is computed from it and is True on this path.
+    assert entry["brackets_estimate"] is True
 
 
 def test_write_report_is_json_and_sorted(tmp_path):
@@ -95,3 +101,19 @@ def test_analyze_pooled_interval_brackets_its_own_point_estimate():
     for key, entry in metrics.items():
         iv = entry["subsample"]
         assert iv["lo"] <= entry["estimate"] <= iv["hi"], key
+        # the emitted flag must agree with the arithmetic, not be set by hand
+        assert entry["brackets_estimate"] is True, key
+
+
+def test_brackets_estimate_is_false_when_the_band_excludes_the_estimate():
+    # The M4 edge-f1 situation, unit-sized: edge-f1's prediction side is a set
+    # union over documents, so the statistic is monotone in distinct-document
+    # count and every size-m draw lands below the full-corpus estimate. The
+    # band is then a corpus-size sensitivity range, not a CI, and the flag is
+    # what says so in the artifact.
+    entry = _subsample_iv(0.3233, [0.29, 0.30, 0.31], m=656, n=1311, level=0.95)
+    assert entry["subsample"]["hi"] < entry["estimate"]
+    assert entry["brackets_estimate"] is False
+    # ... and True when the draws do straddle, on the same construction
+    straddling = _subsample_iv(0.30, [0.29, 0.30, 0.31], m=656, n=1311, level=0.95)
+    assert straddling["brackets_estimate"] is True

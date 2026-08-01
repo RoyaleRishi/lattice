@@ -69,6 +69,23 @@ def subsample_interval(
     reporting a band that excludes it. tau == 1 (m == n) reduces exactly to the
     percentile interval.
 
+    IMPORTANT — when the result is not a confidence interval. Subsampling
+    assumes theta_hat_m and theta_hat_n are centred on the same theta, so that
+    the only difference between a size-m replicate and the full sample is a
+    known rate. That assumption fails for a *size-dependent* functional: one
+    whose value depends on how many distinct documents are in the sample at
+    all, either because its prediction side is a set union over documents (so
+    it grows sublinearly and never reaches the full-corpus value) or because
+    its denominator is a fixed corpus-level quantity that does not shrink with
+    the sample. For such a metric the draws sit systematically to one side of
+    the estimate and never straddle it, at any m, under this scheme *and*
+    under the with-replacement bootstrap alike — it is a bias in the
+    functional, not variance that a rate correction can rescale away. The
+    output is then a corpus-size sensitivity range, not a confidence interval,
+    and must not be quoted as one. `edge-f1` is the shipped example; see its
+    docstring. report.py emits `brackets_estimate` so the distinction is
+    machine-readable in the artifact.
+
     n == 0 means every document was held fixed: there is nothing to resample,
     so the honest answer is a zero-width interval at the estimate.
     """

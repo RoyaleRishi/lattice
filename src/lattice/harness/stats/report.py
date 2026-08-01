@@ -13,6 +13,7 @@ from lattice.harness.runner import (
     run_on_documents,
 )
 from lattice.harness.stats.intervals import (
+    Interval,
     bca_interval,
     percentile_interval,
     subsample_interval,
@@ -21,15 +22,33 @@ from lattice.harness.stats.resample import bootstrap, bootstrap_holistic, jackkn
 from lattice.ports import Dataset
 
 
+def _brackets(estimate: float, iv: Interval) -> bool:
+    """Does the interval contain the point estimate it is reported against?
+
+    False means the emitted band is NOT a confidence interval and must not be
+    quoted as one. The usual cause is a size-dependent pooled functional — one
+    whose value depends on how many distinct documents are in the sample, such
+    as a set-union prediction side or a fixed corpus-level denominator (see
+    EdgeF1). For those, theta(m) < theta(n) deterministically, the draws never
+    straddle the estimate at any m, and the band is a corpus-size sensitivity
+    range. This flag exists so a consumer of the JSON can tell the two apart
+    without re-deriving the argument.
+    """
+    return iv.lo <= estimate <= iv.hi
+
+
 def _iv(estimate: float, resamples: list[float], jack: list[float], level: float) -> dict:
     """n-out-of-n bootstrap draws (macro metrics): BCa plus the plain
-    percentile interval."""
+    percentile interval. BCa is the authoritative one — it already falls back
+    to the percentile interval when its own adjustment would not bracket — so
+    it is what `brackets_estimate` is computed from."""
     bca = bca_interval(estimate, resamples, jack, level)
     pct = percentile_interval(estimate, resamples, level)
     return {
         "estimate": estimate,
         "bca": {"lo": bca.lo, "hi": bca.hi, "method": bca.method},
         "percentile": {"lo": pct.lo, "hi": pct.hi, "method": pct.method},
+        "brackets_estimate": _brackets(estimate, bca),
     }
 
 
@@ -45,6 +64,7 @@ def _subsample_iv(
     return {
         "estimate": estimate,
         "subsample": {"lo": iv.lo, "hi": iv.hi, "method": iv.method},
+        "brackets_estimate": _brackets(estimate, iv),
     }
 
 

@@ -14,7 +14,36 @@ class EdgeF1(Metric, Resamplable):
     expressed as (hyponym label, hypernym label) pairs — against
     ground_truth["is_a_edges"] (M4 spec §4.6; TExEval-2 task paper §4.3).
     Direction matters. predicted_edges/gold_edges counts are returned for
-    diagnosis (floats, like every metric value)."""
+    diagnosis (floats, like every metric value).
+
+    NOT INTERVAL-ESTIMABLE BY DOCUMENT RESAMPLING. This metric is `pooled`, so
+    the harness draws it without replacement (see resample.py) — that removes
+    the multiplicity collapse in _aggregate, but it does not make the resulting
+    band a confidence interval, and no resampling scheme would. edge-f1 is a
+    *size-dependent* functional of the document set, on both sides of every
+    ratio:
+
+    - The prediction side is a set union over documents (_aggregate unions the
+      per-document edge frozensets), so predicted_edges is monotone increasing
+      in the number of *distinct* documents in the sample and grows sublinearly
+      — a half-corpus draw recovers strictly fewer edges than the full corpus.
+    - The recall denominator is the fixed corpus-level gold taxonomy (1587
+      edges on TExEval food), which does not shrink with the sample. Recall is
+      therefore monotone in corpus size too, and predicted_edges is an unbounded
+      raw count rather than a converging statistic.
+
+    So theta(m) < theta(n) deterministically for m < n. The draws sit
+    systematically below the point estimate and never straddle it, at any m,
+    under with-replacement and without-replacement draws alike. sqrt(m / n)
+    corrects a variance *rate*; it cannot correct a monotone shift in the
+    estimand. Measured on M4 food (m=656, n=1311): f1 estimate 0.3233 against a
+    draw band of [0.2993, 0.3095], with every key except the constant
+    gold_edges excluding its own estimate.
+
+    Read edge-f1's emitted band as a corpus-size sensitivity range, not a
+    confidence interval. The report's `brackets_estimate` flag is False for
+    exactly this reason and is the machine-readable form of this paragraph.
+    """
 
     kind = "pooled"
 
