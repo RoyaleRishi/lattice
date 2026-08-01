@@ -1,0 +1,62 @@
+{
+  "env-eurovoc": {
+    "and_other_occurrences": 11,
+    "backward_walk_call_sites": 0,
+    "edges_added_by_fix": 0,
+    "edges_removed_by_fix": 0,
+    "extra_candidate_pairs_proposed": 0,
+    "or_other_occurrences": 3,
+    "sample_added": [],
+    "sample_removed": []
+  },
+  "food": {
+    "and_other_occurrences": 68,
+    "backward_walk_call_sites": 0,
+    "edges_added_by_fix": 0,
+    "edges_removed_by_fix": 0,
+    "extra_candidate_pairs_proposed": 0,
+    "or_other_occurrences": 41,
+    "sample_added": [],
+    "sample_removed": []
+  },
+  "food-wordnet": {
+    "and_other_occurrences": 58,
+    "backward_walk_call_sites": 3,
+    "edges_added_by_fix": 0,
+    "edges_removed_by_fix": 0,
+    "extra_candidate_pairs_proposed": 0,
+    "or_other_occurrences": 69,
+    "sample_added": [],
+    "sample_removed": []
+  },
+  "science": {
+    "and_other_occurrences": 26,
+    "backward_walk_call_sites": 0,
+    "edges_added_by_fix": 0,
+    "edges_removed_by_fix": 0,
+    "extra_candidate_pairs_proposed": 0,
+    "or_other_occurrences": 4,
+    "sample_added": [],
+    "sample_removed": []
+  },
+  "science-eurovoc": {
+    "and_other_occurrences": 10,
+    "backward_walk_call_sites": 0,
+    "edges_added_by_fix": 0,
+    "edges_removed_by_fix": 0,
+    "extra_candidate_pairs_proposed": 0,
+    "or_other_occurrences": 2,
+    "sample_added": [],
+    "sample_removed": []
+  },
+  "science-wordnet": {
+    "and_other_occurrences": 19,
+    "backward_walk_call_sites": 0,
+    "edges_added_by_fix": 0,
+    "edges_removed_by_fix": 0,
+    "extra_candidate_pairs_proposed": 0,
+    "or_other_occurrences": 3,
+    "sample_added": [],
+    "sample_removed": []
+  }
+}
