@@ -213,10 +213,31 @@ whichever direction it falls.
 
 ## 8. Output artifacts
 
-- `reports/<milestone>/interval-report.json` (gitignored, regenerable): per metric —
-  point estimate, BCa CI, percentile CI, method flags, B, seed; per paired claim —
-  delta, CI, `prob_positive`; per threshold grid — point + CI at each threshold; per
-  permutation — spread stats.
+- `reports/intervals/<milestone>/interval-report.json` (committed since Task 11,
+  regenerable): per metric — point estimate plus **the interval construction that
+  matches the metric's kind**, with `scheme`, `m`, `n`, `brackets_estimate`, B and
+  seed. This is not one uniform shape, and the difference is load-bearing (amended
+  2026-08-01, Task 10/10c):
+  - *macro* metrics (`scheme = "resample"`, e.g. `f1-at-k`) carry both `bca` and
+    `percentile` blocks, as originally specified;
+  - *pooled* metrics (`scheme = "subsample"`, e.g. `clustering`, `edge-f1`) carry
+    **neither**. They take an m-out-of-n subsample band rescaled by
+    `tau = sqrt(m / (n - m))` and emit a single `subsample` block. BCa is invalid on
+    subsample draws (it reads them as a full-size bootstrap distribution) and the raw
+    percentile interval is not a distinct construction at the harness's
+    `m = round(n / 2)`, where `tau == 1`;
+  - *holistic* metrics (M5) carry only `percentile` and no `scheme`/`m`/`n`/
+    `brackets_estimate` — a deferred shape change, not an oversight.
+
+  `brackets_estimate = false` means the emitted band is **not** a confidence
+  interval but a corpus-size sensitivity range (the shipped case is `edge-f1`); it
+  must not be quoted as a CI. `true` is necessary, not sufficient — see
+  `_brackets` in `src/lattice/harness/stats/report.py`.
+- Per paired claim — delta, CI, `prob_positive`; per threshold grid — point + CI at
+  each threshold; per permutation — spread stats; per comparison family — the
+  Holm-Bonferroni verdict (`m3-multiplicity.json`, added 2026-08-01: the six M3
+  paired deltas are reported jointly, so the per-comparison CIs need family-wise
+  control alongside them).
 - `docs/results/2026-07-14-interval-analysis.md` (**committed**, citable): the headline
   numbers with intervals, the paired-delta verdict in prose, the sensitivity and
   permutation tables, the exact CLI commands that regenerate every number, and the
@@ -241,7 +262,9 @@ whichever direction it falls.
 - Multiple training seeds — inapplicable (deterministic pipeline); documented as the
   reason "seeds" is not the instrument.
 - Multiple-comparison correction across the 6 M4 golds — notable, optional; the results
-  doc may mention it but does not apply it.
+  doc may mention it but does not apply it. Still deferred. Note this is a *different*
+  family from the six M3 paired deltas, which are no longer uncorrected: Holm at
+  α = 0.05 is applied to those and emitted to `m3-multiplicity.json` (2026-08-01).
 - Bayesian / credible intervals; effect sizes beyond the paired delta.
 - Track 2 (second M5 corpus) and Track 3 (excluded-method baseline) — separate specs.
 - Wiring the stats layer into `Engine`/public API — this is a benchmark-analysis tool,
