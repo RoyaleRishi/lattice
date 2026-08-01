@@ -302,7 +302,7 @@ POINT_B3_F1 = 0.896551724137931
 # may show is the intrinsic m-out-of-n scale effect: a size-2 replicate holds a
 # MERGED cluster of 2 rather than 4, so those mentions score 1/2 instead of 1/4
 # and b3-precision moves 13/16 -> 7/8, i.e. b3-f1 0.896552 -> 0.933333, +0.0368.
-# That is what sqrt(m / n) rescaling exists to pay for. Duplication bias, which
+# That is what the subsample rescaling exists to pay for. Duplication bias, which
 # is unbounded in this fixture (a replicate can reach a *perfect* 1.0 on a
 # corpus containing a real error), must be absent entirely.
 B3_F1_TOLERANCE = 0.05

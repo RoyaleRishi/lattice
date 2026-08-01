@@ -34,11 +34,19 @@ class EdgeF1(Metric, Resamplable):
 
     So theta(m) < theta(n) deterministically for m < n. The draws sit
     systematically below the point estimate and never straddle it, at any m,
-    under with-replacement and without-replacement draws alike. sqrt(m / n)
-    corrects a variance *rate*; it cannot correct a monotone shift in the
-    estimand. Measured on M4 food (m=656, n=1311): f1 estimate 0.3233 against a
-    draw band of [0.2993, 0.3095], with every key except the constant
-    gold_edges excluding its own estimate.
+    under with-replacement and without-replacement draws alike. The subsample
+    rescaling corrects a variance *rate*; it cannot correct a monotone shift in
+    the estimand — and at the harness's m = round(n / 2) it barely rescales at
+    all, since the corrected tau = sqrt(m / (n - m)) is ~1.0008 there. Measured
+    on M4 food (m=656, n=1311): f1 estimate 0.3233, with every key except the
+    constant gold_edges excluding its own estimate. The band endpoints once
+    quoted here were computed under the pre-2026-08-01 sqrt(m / n) = 0.707 and
+    are dropped rather than recomputed by hand; read the current ones from a
+    regenerated reports/intervals/m4-food/. The qualitative claim — every band
+    sits below its estimate — is unaffected by construction, not by luck: the
+    rescaling is about the estimate, so sign(lo - estimate) is the same for
+    every tau > 0 and no change of factor can carry a band across the estimate
+    it excludes.
 
     Read edge-f1's emitted band as a corpus-size sensitivity range, not a
     confidence interval. The report's `brackets_estimate` flag is False for

@@ -38,14 +38,19 @@ def _brackets(estimate: float, iv: Interval) -> bool:
     True is not a clean bill of health, and in particular does not certify that
     the functional is size-invariant. A pooled subsampling band is exact only
     for a size-invariant functional; every pooled metric shipped here has some
-    size dependence, and a band can bracket merely because tau-shrinkage pulled
-    one-sided draws back far enough. B3 is the live example: on M3 ConEL-2 the
-    raw size-29 draws for b3-recall span ~[0.8940, 0.9468] against a
-    full-corpus estimate of 0.9050, so theta(m) > theta(n) systematically, and
-    b3-f1's band clears its estimate by only 0.0039 — bracketing there is
-    contingent on the arbitrary choice m = n / 2 (see ClusteringMetric). ARI on
-    the same data is genuinely well-behaved: its draws straddle at
+    size dependence, and a band can bracket by a margin thin enough to be an
+    artifact of the arbitrary choice m = n / 2. B3 is the live example: on M3
+    ConEL-2 the raw size-29 draws for b3-recall span ~[0.8940, 0.9468] against
+    a full-corpus estimate of 0.9050, so theta(m) > theta(n) systematically,
+    and b3-f1's band clears its estimate only barely (see ClusteringMetric).
+    ARI on the same data is genuinely well-behaved: its draws straddle at
     [0.699, 0.897] around 0.804.
+
+    Those raw draw spans are properties of the draws and do not move with the
+    rescaling factor. The clearance figure that used to be quoted here did: it
+    was computed under the pre-10c sqrt(m / n), so it has been dropped rather
+    than recomputed by hand. reports/intervals/ is where the current emitted
+    bands live and is the only place a number like it should be read from.
 
     So: treat False as a hard stop, and True as "not obviously invalid" —
     then check the metric's own docstring before quoting a band as a CI.
@@ -76,11 +81,14 @@ def _iv(estimate: float, resamples: list[float], jack: list[float], level: float
 def _subsample_iv(
     estimate: float, subsamples: list[float], *, m: int, n: int, level: float
 ) -> dict:
-    """m-out-of-n subsample draws (pooled metrics): the sqrt(m / n)-rescaled
-    interval only. BCa and the raw percentile interval are both wrong here —
-    they read the draws as a full-size bootstrap distribution, which is exactly
-    what produced the shipped M4 reports whose intervals excluded their own
-    point estimates."""
+    """m-out-of-n subsample draws (pooled metrics): the sqrt(m / (n - m))-
+    rescaled interval only. BCa is wrong here — it reads the draws as a
+    full-size bootstrap distribution, which is exactly what produced the
+    shipped M4 reports whose intervals excluded their own point estimates. The
+    raw percentile interval is not emitted either, because at the harness's
+    m = round(n / 2) it is not a *different* construction from the one above
+    (tau == 1; see subsample_interval) and printing it as a second column
+    would suggest a corroboration that is not there."""
     iv = subsample_interval(estimate, subsamples, m=m, n=n, level=level)
     return {
         "estimate": estimate,

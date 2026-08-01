@@ -48,14 +48,14 @@ def test_bca_falls_back_when_interval_would_not_bracket_estimate():
 
 
 def test_subsample_interval_brackets_estimate_when_draws_straddle_it():
-    # Hand-computed. draws = [0, 1, 2, 3, 4], estimate = 2.0, m = 2, n = 8,
+    # Hand-computed. draws = [0, 1, 2, 3, 4], estimate = 2.0, m = 2, n = 10,
     # level = 0.5 so alpha/2 = 0.25.
     #   q(0.25): pos = 0.25 * (5 - 1) = 1.0        -> draws[1] = 1.0
     #   q(0.75): pos = 0.75 * (5 - 1) = 3.0        -> draws[3] = 3.0
-    #   tau     = sqrt(m / n) = sqrt(2 / 8) = 0.5
+    #   tau     = sqrt(m / (n - m)) = sqrt(2 / 8) = 0.5
     #   lo      = 2.0 + 0.5 * (1.0 - 2.0) = 1.5
     #   hi      = 2.0 + 0.5 * (3.0 - 2.0) = 2.5
-    iv = subsample_interval(2.0, [0.0, 1.0, 2.0, 3.0, 4.0], m=2, n=8, level=0.5)
+    iv = subsample_interval(2.0, [0.0, 1.0, 2.0, 3.0, 4.0], m=2, n=10, level=0.5)
     assert iv.method == "subsample"
     assert (iv.lo, iv.hi) == (1.5, 2.5)
     assert iv.lo <= 2.0 <= iv.hi
@@ -66,14 +66,14 @@ def test_subsample_interval_shrinks_toward_estimate_when_draws_do_not_straddle()
     # so the raw percentile interval [3.5, 4.5] excludes the estimate entirely.
     # Rescaling by tau pulls the band toward the estimate instead of reporting
     # a "CI" centred on the draws.
-    #   draws = [3, 4, 5], estimate = 1.0, m = 1, n = 4, level = 0.5
+    #   draws = [3, 4, 5], estimate = 1.0, m = 1, n = 5, level = 0.5
     #   q(0.25): pos = 0.5 -> 3.0 * 0.5 + 4.0 * 0.5 = 3.5
     #   q(0.75): pos = 1.5 -> 4.0 * 0.5 + 5.0 * 0.5 = 4.5
-    #   tau = sqrt(1 / 4) = 0.5
+    #   tau = sqrt(1 / (5 - 1)) = 0.5
     #   lo  = 1.0 + 0.5 * (3.5 - 1.0) = 2.25
     #   hi  = 1.0 + 0.5 * (4.5 - 1.0) = 2.75
     draws = [3.0, 4.0, 5.0]
-    iv = subsample_interval(1.0, draws, m=1, n=4, level=0.5)
+    iv = subsample_interval(1.0, draws, m=1, n=5, level=0.5)
     pct = percentile_interval(1.0, draws, level=0.5)
     assert (iv.lo, iv.hi) == (2.25, 2.75)
     assert (pct.lo, pct.hi) == (3.5, 4.5)
@@ -81,11 +81,26 @@ def test_subsample_interval_shrinks_toward_estimate_when_draws_do_not_straddle()
     assert iv.lo < pct.lo and iv.hi < pct.hi  # but it is strictly closer
 
 
-def test_subsample_interval_reduces_to_percentile_when_m_equals_n():
+def test_subsample_interval_reduces_to_percentile_at_the_harness_draw_size():
+    # tau = sqrt(m / (n - m)) is exactly 1 at m = n / 2, which is what
+    # resample.subsample_size() draws. The correction is then a pure
+    # translation onto the estimate, not a shrink — so on draws already
+    # centred on the estimate the band IS the percentile band. This is the
+    # property the pre-2026-08-01 sqrt(m / n) = 0.707 violated by 29%.
     draws = [float(i) for i in range(100)]
-    iv = subsample_interval(50.0, draws, m=13, n=13)
-    pct = percentile_interval(50.0, draws)
+    iv = subsample_interval(49.5, draws, m=13, n=26)
+    pct = percentile_interval(49.5, draws)
+    assert iv.method == "subsample"
     assert abs(iv.lo - pct.lo) < 1e-12 and abs(iv.hi - pct.hi) < 1e-12
+
+
+def test_subsample_interval_is_degenerate_when_the_subsample_is_the_whole_pool():
+    # m == n is reachable, not hypothetical: subsample_size() floors m at 2, so
+    # n == 2 yields m == 2. tau = sqrt(m / (n - m)) would divide by zero, and
+    # the honest answer is that a "subsample" equal to the pool has no
+    # resampling variability at all.
+    iv = subsample_interval(0.4, [0.4, 0.9, 0.1], m=2, n=2)
+    assert (iv.lo, iv.hi, iv.method) == (0.4, 0.4, "degenerate")
 
 
 def test_subsample_interval_degenerate_when_nothing_was_resampled():
@@ -97,7 +112,7 @@ def test_subsample_interval_degenerate_when_nothing_was_resampled():
 
 @pytest.mark.parametrize(("m", "n"), [(5, 4), (0, 4), (-1, 4)])
 def test_subsample_interval_rejects_impossible_draw_sizes(m, n):
-    # tau = sqrt(m / n) is only a shrink factor for 0 < m <= n; anything else
+    # tau = sqrt(m / (n - m)) is only defined for 0 < m <= n; anything else
     # means the caller mis-recorded the draw and must fail loudly.
     with pytest.raises(ValueError, match="0 < m <= n"):
         subsample_interval(1.0, [1.0, 2.0], m=m, n=n)
@@ -135,20 +150,20 @@ def test_paired_delta_subsample_rescaling_matches_a_hand_computed_example():
     # two constructions can be read side by side.
     #   deltas  = a - b = [0, 1, 2, 3, 4]
     #   observed = estimate_a - estimate_b = 2.0 - 0.0 = 2.0
-    #   m = 2, n = 8, level = 0.5 so alpha/2 = 0.25
+    #   m = 2, n = 10, level = 0.5 so alpha/2 = 0.25
     #   q(0.25): pos = 0.25 * (5 - 1) = 1.0  -> 1.0
     #   q(0.75): pos = 0.75 * (5 - 1) = 3.0  -> 3.0
-    #   tau = sqrt(2 / 8) = 0.5
+    #   tau = sqrt(2 / (10 - 2)) = 0.5
     #   lo  = 2.0 + 0.5 * (1.0 - 2.0) = 1.5
     #   hi  = 2.0 + 0.5 * (3.0 - 2.0) = 2.5
     a = [0.0, 1.0, 2.0, 3.0, 4.0]
     b = [0.0, 0.0, 0.0, 0.0, 0.0]
-    d = paired_delta(a, b, 2.0, 0.0, level=0.5, m=2, n=8)
+    d = paired_delta(a, b, 2.0, 0.0, level=0.5, m=2, n=10)
     assert d.estimate == 2.0
     assert (d.lo, d.hi) == (1.5, 2.5)
     # identical to applying subsample_interval to the delta distribution
     # directly, anchored on the observed delta
-    iv = subsample_interval(2.0, [x - y for x, y in zip(a, b)], m=2, n=8, level=0.5)
+    iv = subsample_interval(2.0, [x - y for x, y in zip(a, b)], m=2, n=10, level=0.5)
     assert (d.lo, d.hi) == (iv.lo, iv.hi)
 
 
@@ -157,11 +172,12 @@ def test_paired_delta_subsample_prob_positive_uses_the_rescaled_distribution():
     # are strictly positive. The tau-rescaled deltas are
     #   2.0 + 0.5 * (d - 2.0) = [1.0, 1.5, 2.0, 2.5, 3.0]
     # — all five positive, because the size-2 replicates are over-dispersed by
-    # sqrt(n / m) and the rescaling removes exactly that. Reporting 0.8 next to
-    # an interval of [1.5, 2.5] that excludes zero would be self-contradictory.
+    # sqrt((n - m) / m) and the rescaling removes exactly that. Reporting 0.8
+    # next to an interval of [1.5, 2.5] that excludes zero would be
+    # self-contradictory.
     a = [0.0, 1.0, 2.0, 3.0, 4.0]
     b = [0.0] * 5
-    assert paired_delta(a, b, 2.0, 0.0, level=0.5, m=2, n=8).prob_positive == 1.0
+    assert paired_delta(a, b, 2.0, 0.0, level=0.5, m=2, n=10).prob_positive == 1.0
     assert paired_delta(a, b, 2.0, 0.0, level=0.5).prob_positive == 0.8   # raw, no rescale
 
 
@@ -179,13 +195,32 @@ def test_paired_delta_without_m_and_n_is_exactly_the_percentile_path():
 
 
 def test_paired_delta_subsample_is_narrower_than_reading_the_draws_as_a_bootstrap():
-    # tau = sqrt(m / n) < 1, so the subsample band is strictly inside the band
-    # you get by (wrongly) reading size-m deltas as full-size bootstrap deltas.
+    # tau = sqrt(m / (n - m)) = sqrt(25 / 75) < 1 at m < n / 2, so the
+    # subsample band is strictly inside the band you get by (wrongly) reading
+    # size-m deltas as full-size bootstrap deltas.
     a = [float(i) for i in range(100)]
     b = [0.0] * 100
     sub = paired_delta(a, b, 50.0, 0.0, m=25, n=100)
     raw = paired_delta(a, b, 50.0, 0.0)
     assert raw.lo < sub.lo < sub.hi < raw.hi
+
+
+def test_paired_delta_prob_positive_uses_the_same_tau_as_its_interval():
+    # Regression pin for the second home of the pre-2026-08-01 defect. The
+    # interval comes from subsample_interval and so inherited the corrected
+    # factor for free, but prob_positive was rescaled by paired_delta's own
+    # inlined `math.sqrt(m / n)` and would NOT have.
+    #
+    # observed = 1.0, m = 8, n = 16 (the harness's m = n / 2), deltas below.
+    # Correct tau = sqrt(8 / 8) = 1, so the rescaled deltas are the deltas and
+    # prob_positive is just their sign: 3 of 5 above zero.
+    # The old tau = sqrt(8 / 16) = 0.7071 pulls every delta toward observed =
+    # 1.0, flipping -0.2 to +0.1515 and reporting 4 of 5.
+    deltas = [-3.0, -0.2, 0.5, 2.0, 4.0]
+    b = [0.0] * 5
+    d = paired_delta(deltas, b, 1.0, 0.0, m=8, n=16)
+    assert d.prob_positive == 0.6
+    assert 1.0 + (8 / 16) ** 0.5 * (-0.2 - 1.0) > 0     # what the old factor did
 
 
 @pytest.mark.parametrize(("m", "n"), [(2, None), (None, 8)])

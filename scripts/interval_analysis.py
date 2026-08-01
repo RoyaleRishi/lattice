@@ -117,7 +117,7 @@ def m3_paired_deltas(corpus: str) -> list[dict]:
     bootstrap() run with the SAME seed and the SAME scheme on every arm's
     clustering bundle -> iteration i draws identical document indices in every
     arm (paired by construction), then paired_delta() with the arms' (m, n) so
-    the size-m delta distribution is rescaled by sqrt(m / n).
+    the size-m delta distribution is rescaled by sqrt(m / (n - m)).
 
     The pairing is only "by construction" while the arms enumerate documents
     identically, which is what makes the draw sequences share an RNG stream;

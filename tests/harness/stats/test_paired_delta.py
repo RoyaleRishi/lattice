@@ -142,6 +142,11 @@ def test_subsample_paired_delta_is_seed_deterministic_and_rescaled():
     assert sub == run(11)[0]              # GC3: same seed, byte-identical result
     assert sub != run(12)[0]              # and the seed is actually doing work
     assert sub.estimate == raw.estimate   # both anchored on the same observed delta
-    # tau = sqrt(4 / 8) < 1, so the rescaled band is strictly inside the band
-    # you get from reading the same size-4 deltas as full-size bootstrap draws
-    assert raw.lo < sub.lo and sub.hi < raw.hi
+    # m = 4, n = 8 is the harness's m = n / 2, where tau = sqrt(4 / (8 - 4)) is
+    # exactly 1 and the rescaling is the identity — the subsample band is the
+    # plain percentile band over the paired size-4 deltas. That is the content
+    # of the 10c correction: at this draw size the size-m deltas already have
+    # the right spread for the full-sample delta, and the pre-2026-08-01
+    # sqrt(4 / 8) = 0.707 shrank them 29% past it.
+    assert sub.lo == pytest.approx(raw.lo, abs=1e-15)
+    assert sub.hi == pytest.approx(raw.hi, abs=1e-15)

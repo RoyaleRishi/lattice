@@ -18,8 +18,11 @@ Two item-level schemes, chosen by the caller (report.py picks by metric kind):
   entirely, evaluating only the ~63.2% of documents that a with-replacement
   draw happens to touch. Drawing without replacement removes duplication at
   the source. The price — a size-m replicate is more variable than the full
-  sample — is paid by intervals.subsample_interval()'s sqrt(m / n) rate
-  correction, not here.
+  sample — is paid by intervals.subsample_interval()'s rate correction, not
+  here. That factor is sqrt(m / (n - m)), not sqrt(m / n): the subsample
+  overlaps the full sample in m of its n documents and the finite-population
+  term cannot be dropped at the m = subsample_size(n) drawn below. See
+  intervals._subsample_tau.
 """
 
 import random

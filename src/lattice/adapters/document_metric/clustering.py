@@ -70,14 +70,19 @@ class ClusteringMetric(DocumentMetric, Resamplable):
     but 1.0 in a subsample that happened to keep only one side — so subsets
     systematically flatter B³, i.e. theta(m) > theta(n).
 
-    Measured on M3 ConEL-2 nn@0.90 (m=29, n=58), raw draws before the
-    sqrt(m / n) rescaling: b3-recall spans ~[0.8940, 0.9468] against a
-    full-corpus estimate of 0.9050, and b3-f1 ~[0.9436, 0.9723] against 0.9491
-    — in both, the estimate sits near the lower tail of the size-m draws. The
-    emitted bands do bracket, but partly because tau-shrinkage pulls them back:
-    b3-f1 clears its estimate by 0.0039, which is contingent on the arbitrary
-    m = n / 2. So `brackets_estimate: true` on a B³ key is necessary, not
-    sufficient — do not read it as certifying a size-invariant functional.
+    Measured on M3 ConEL-2 nn@0.90 (m=29, n=58), raw size-m draw quantiles:
+    b3-recall spans ~[0.8940, 0.9468] against a full-corpus estimate of 0.9050,
+    and b3-f1 ~[0.9436, 0.9723] against 0.9491 — in both, the estimate sits
+    near the lower tail of the size-m draws. Those spans are properties of the
+    draws and do not move with the interval's rescaling factor, so they survive
+    the 2026-08-01 correction of that factor from sqrt(m / n) to
+    sqrt(m / (n - m)). What does not survive is the clearance figure that used
+    to be quoted here: at m = n / 2 the corrected tau is exactly 1, so the
+    emitted band is the raw quantile span above and no longer owes its
+    bracketing to tau-shrinkage. The band still brackets, but by a margin that
+    must be read off a regenerated reports/intervals/ run rather than restated
+    from memory here. So `brackets_estimate: true` on a B³ key is necessary,
+    not sufficient — do not read it as certifying a size-invariant functional.
 
     ARI is the well-behaved key on this metric: on the same data its draws
     straddle the estimate at [0.699, 0.897] around 0.804. Contrast `edge-f1`,
