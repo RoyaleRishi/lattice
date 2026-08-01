@@ -85,6 +85,22 @@ class TestMDERankScorer(ScorerContract):
         assert saliences["alpha"] == saliences["beta"] == 1.0
         assert {sm.mention.surface for sm in scored if sm.selected} == {"alpha"}
 
+    def test_zero_vector_collapse_is_a_blind_spot_for_degenerate_surfaces(self):
+        # Same fixture as the tie-break test above: masking is a total no-op
+        # (every masked document is "", which HashingEmbedder maps to the
+        # zero vector) — the same symptom degenerate_surfaces is meant to
+        # catch — but cosine(0, 0) == 0.0 makes salience 1.0, the maximum,
+        # not <= 1e-12. This pins the known blind spot documented on the
+        # class: the detector does not fire here even though masking never
+        # moved the embedding.
+        scorer = MDERankScorer(embedder=HashingEmbedder(dim=16), top_k=1)
+        mentions = [
+            make_mention(surface="beta", unit_id="d:u0", span=(6, 10)),
+            make_mention(surface="alpha", unit_id="d:u0", span=(0, 5)),
+        ]
+        scorer.score(mentions, [])
+        assert scorer.degenerate_surfaces == 0
+
     def test_degenerate_embedder_flags_every_surface(self):
         # When masking never changes the embedding (e.g. every candidate's
         # first occurrence falls past the embedder's truncation cutoff),

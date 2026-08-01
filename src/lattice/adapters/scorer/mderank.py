@@ -23,15 +23,30 @@ class MDERankScorer(Scorer):
     are not truncation-handled: 61 of 500 Inspec test abstracts exceed
     MiniLM's 256 word-piece window (median 158, max 497 word-pieces). Past
     the cutoff, masking a candidate is a no-op on the truncated input, so its
-    masked-document embedding is (near-)identical to the unmasked one and its
-    salience collapses toward zero (in the longest document, 22 such
-    candidates score exactly 2.22e-16, versus a mean of 0.0852 for candidates
-    whose first occurrence falls before the cutoff). This is detected, not
-    prevented: `self.degenerate_surfaces` counts surfaces whose salience is
-    `<= 1e-12` after each `score()` call, so a harness can surface it, but
-    those candidates still receive a (degenerate) ranking rather than being
-    dropped or raising — a partially-truncated document still yields a
-    usable ranking for its early candidates."""
+    masked-document embedding is numerically indistinguishable from the
+    unmasked one — in Inspec test document 392 (the longest, 60 distinct
+    candidate surfaces), 28 candidates score exactly -2.22e-16, versus a
+    mean of 0.0242 for the remaining, non-degenerate surfaces.
+
+    `self.degenerate_surfaces` (reset every `score()` call) counts surfaces
+    whose salience is `<= 1e-12` — candidates the ablation could not
+    distinguish from the unmasked document. This is a diagnostic, not a
+    truncation count: truncation is the dominant known cause, but a
+    legitimate, non-truncated candidate whose masking happens not to
+    perturb a pooled embedding measurably would trip the same threshold, so
+    "N degenerate" should be read as "the ablation went blind on N
+    candidates," not "N truncated." Detection does not prevent anything —
+    degenerate candidates still receive a (degenerate) ranking rather than
+    being dropped or raising, so a partially-truncated document still
+    yields a usable ranking for its early candidates.
+
+    Known blind spot: `cosine()` returns `0.0` for a zero-norm vector
+    (deliberate; core/vectors.py), so if masking collapses the document to
+    the zero vector — e.g. no units at all, or an embedder that maps
+    fully-masked text to all-zeros — salience is `1.0 - 0.0 = 1.0`, the
+    maximum, not `<= 1e-12`. Masking was as much a no-op there as in the
+    truncation case, but `degenerate_surfaces` misses it; see
+    `test_empty_units_yields_genuine_tie_broken_lexicographically`."""
 
     def __init__(self, embedder: Embedder, top_k: int = 10, mask_token: str = "[MASK]"):
         self.embedder = embedder
