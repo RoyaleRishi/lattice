@@ -1,0 +1,308 @@
+{
+  "runs": [
+    {
+      "config": {
+        "concept_store": {
+          "name": "in-memory",
+          "params": {}
+        },
+        "dataset": {
+          "name": "mention-clusters",
+          "params": {
+            "root": "data/ecbplus",
+            "split": "test"
+          }
+        },
+        "document_metrics": [
+          {
+            "name": "clustering",
+            "params": {}
+          }
+        ],
+        "embedder": {
+          "name": "sentence-transformer",
+          "params": {}
+        },
+        "extractor": {
+          "name": "gold-mentions",
+          "params": {
+            "root": "data/ecbplus",
+            "split": "test"
+          }
+        },
+        "graph_integrator": {
+          "name": "in-memory",
+          "params": {}
+        },
+        "metrics": [],
+        "relation_inducer": {
+          "name": "co-occurrence",
+          "params": {}
+        },
+        "resolver": {
+          "name": "exact-label",
+          "params": {}
+        },
+        "run": {
+          "on_error": "fail",
+          "seed": 0
+        },
+        "scorer": {
+          "name": "passthrough",
+          "params": {}
+        },
+        "segmenter": {
+          "name": "block",
+          "params": {}
+        }
+      },
+      "documents_processed": 206,
+      "errors": [],
+      "metrics": {
+        "clustering": {
+          "ari": 0.3281522033038643,
+          "b3-f1": 0.6084026265290092,
+          "b3-precision": 0.8077284622823493,
+          "b3-recall": 0.48798174927942484
+        }
+      }
+    },
+    {
+      "config": {
+        "concept_store": {
+          "name": "in-memory",
+          "params": {}
+        },
+        "dataset": {
+          "name": "mention-clusters",
+          "params": {
+            "root": "data/ecbplus",
+            "split": "test"
+          }
+        },
+        "document_metrics": [
+          {
+            "name": "clustering",
+            "params": {}
+          }
+        ],
+        "embedder": {
+          "name": "sentence-transformer",
+          "params": {}
+        },
+        "extractor": {
+          "name": "gold-mentions",
+          "params": {
+            "root": "data/ecbplus",
+            "split": "test"
+          }
+        },
+        "graph_integrator": {
+          "name": "in-memory",
+          "params": {}
+        },
+        "metrics": [],
+        "relation_inducer": {
+          "name": "co-occurrence",
+          "params": {}
+        },
+        "resolver": {
+          "name": "stemmed-label",
+          "params": {}
+        },
+        "run": {
+          "on_error": "fail",
+          "seed": 0
+        },
+        "scorer": {
+          "name": "passthrough",
+          "params": {}
+        },
+        "segmenter": {
+          "name": "block",
+          "params": {}
+        }
+      },
+      "documents_processed": 206,
+      "errors": [],
+      "metrics": {
+        "clustering": {
+          "ari": 0.3444441320952909,
+          "b3-f1": 0.6154115932946301,
+          "b3-precision": 0.7967916293378802,
+          "b3-recall": 0.501297291149391
+        }
+      }
+    },
+    {
+      "config": {
+        "concept_store": {
+          "name": "in-memory",
+          "params": {}
+        },
+        "dataset": {
+          "name": "mention-clusters",
+          "params": {
+            "root": "data/ecbplus",
+            "split": "test"
+          }
+        },
+        "document_metrics": [
+          {
+            "name": "clustering",
+            "params": {}
+          }
+        ],
+        "embedder": {
+          "name": "sentence-transformer",
+          "params": {}
+        },
+        "extractor": {
+          "name": "gold-mentions",
+          "params": {
+            "root": "data/ecbplus",
+            "split": "test"
+          }
+        },
+        "graph_integrator": {
+          "name": "in-memory",
+          "params": {}
+        },
+        "metrics": [],
+        "relation_inducer": {
+          "name": "co-occurrence",
+          "params": {}
+        },
+        "resolver": {
+          "name": "embedding-nn",
+          "params": {
+            "threshold": 0.9
+          }
+        },
+        "run": {
+          "on_error": "fail",
+          "seed": 0
+        },
+        "scorer": {
+          "name": "passthrough",
+          "params": {}
+        },
+        "segmenter": {
+          "name": "block",
+          "params": {}
+        }
+      },
+      "documents_processed": 206,
+      "errors": [],
+      "metrics": {
+        "clustering": {
+          "ari": 0.3780119862718437,
+          "b3-f1": 0.6255480318971353,
+          "b3-precision": 0.7841827733015665,
+          "b3-recall": 0.5202957972618915
+        }
+      }
+    }
+  ],
+  "sweep": {
+    "axes": {
+      "resolver": [
+        {
+          "name": "exact-label",
+          "params": {}
+        },
+        {
+          "name": "stemmed-label",
+          "params": {}
+        },
+        {
+          "name": "embedding-nn",
+          "params": {
+            "threshold": 0.9
+          }
+        }
+      ]
+    },
+    "base": {
+      "concept_store": {
+        "name": "in-memory",
+        "params": {}
+      },
+      "dataset": {
+        "name": "mention-clusters",
+        "params": {
+          "root": "data/ecbplus",
+          "split": "test"
+        }
+      },
+      "document_metrics": [
+        {
+          "name": "clustering",
+          "params": {}
+        }
+      ],
+      "embedder": {
+        "name": "sentence-transformer",
+        "params": {}
+      },
+      "extractor": {
+        "name": "gold-mentions",
+        "params": {
+          "root": "data/ecbplus",
+          "split": "test"
+        }
+      },
+      "graph_integrator": {
+        "name": "in-memory",
+        "params": {}
+      },
+      "metrics": [],
+      "relation_inducer": {
+        "name": "co-occurrence",
+        "params": {}
+      },
+      "resolver": {
+        "name": "exact-label",
+        "params": {}
+      },
+      "run": {
+        "on_error": "fail",
+        "seed": 0
+      },
+      "scorer": {
+        "name": "passthrough",
+        "params": {}
+      },
+      "segmenter": {
+        "name": "block",
+        "params": {}
+      }
+    }
+  },
+  "table": [
+    {
+      "axis:resolver": "exact-label",
+      "clustering.ari": 0.3281522033038643,
+      "clustering.b3-f1": 0.6084026265290092,
+      "clustering.b3-precision": 0.8077284622823493,
+      "clustering.b3-recall": 0.48798174927942484,
+      "errors": 0
+    },
+    {
+      "axis:resolver": "stemmed-label",
+      "clustering.ari": 0.3444441320952909,
+      "clustering.b3-f1": 0.6154115932946301,
+      "clustering.b3-precision": 0.7967916293378802,
+      "clustering.b3-recall": 0.501297291149391,
+      "errors": 0
+    },
+    {
+      "axis:resolver": "embedding-nn",
+      "clustering.ari": 0.3780119862718437,
+      "clustering.b3-f1": 0.6255480318971353,
+      "clustering.b3-precision": 0.7841827733015665,
+      "clustering.b3-recall": 0.5202957972618915,
+      "errors": 0
+    }
+  ]
+}
