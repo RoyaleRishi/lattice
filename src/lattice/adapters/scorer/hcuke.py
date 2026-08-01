@@ -54,12 +54,20 @@ class HCUKEScorer(Scorer):
       score is a product (Eq. 7), contributes a term proportional to that
       candidate's own global significance and position weight rather than
       cancelling out.
-    - Normalization (not in the paper; see the deviations below): R_g, R_l and
-      W(c) are each min-max normalized to [0, 1] across the document's
-      candidates before Eq. (7) multiplies them, so that no factor can be
-      negative and none dominates by raw scale.
-    - Final score (Eq. 7): R(c) = R_g(c) * R_l(c) * W(c) over the normalized
-      factors; top_k unique surfaces by (-score, surface).
+    - Normalization (not in the paper; see the deviations below): R_g and R_l
+      are min-max normalized to [0, 1] across the document's candidates before
+      Eq. (7) multiplies them, so that neither can be negative and neither
+      dominates by raw scale. W(c) is deliberately left alone -- the asymmetry
+      is the point, not an oversight. R_g and R_l are unbounded raw sums over
+      sentences and candidate pairs, with no intrinsic scale; W(c) is already
+      normalized, being a softmax (Eq. 3) and so a positive distribution over
+      candidates summing to 1. Min-max stretching a softmax is not
+      normalization but distortion: it would manufacture spread the paper
+      never intended, inflating a signal Eq. (3) deliberately keeps weak and
+      near-uniform, and handing the last-positioned candidate an exact 0. The
+      rule is: normalize the unbounded factors, leave the bounded one as it is.
+    - Final score (Eq. 7): R(c) = R_g(c) * R_l(c) * W(c), the first two
+      normalized; top_k unique surfaces by (-score, surface).
 
     Documented deviations: candidates, sentences, and documents are embedded
     as whole strings through the injected Embedder (paper: BERT token vectors
@@ -70,11 +78,12 @@ class HCUKEScorer(Scorer):
     is the phrase "simple filtering and normalization operations" (a contrast
     with prior work's "complex filtering techniques"), and neither §3.4 nor
     Algorithm 1 says what is normalized or how -- Algorithm 1 line 19 forms
-    the Eq. (7) product from the raw R_g, R_l and W_c. Min-max per factor is
-    our reading, forced less by the text than by Eq. (7) being a product:
-    Eq. (6) subtracts lambda*mu n times, so raw R_l is negative for most
-    candidates at the paper's lambda=1.3, and a negative factor in a product
-    ranks the least central candidates first. One consequence is exact, not
+    the Eq. (7) product from the raw R_g, R_l and W_c. Min-max on the two
+    unbounded factors is our reading, forced less by the text than by Eq. (7)
+    being a product: Eq. (6) subtracts lambda*mu n times, so raw R_l is
+    negative for most candidates at the paper's lambda=1.3, and a negative
+    factor in a product ranks the least central candidates first. One
+    consequence of normalizing R_l in particular is exact, not
     merely approximate, insensitivity to denoise_lambda: -lambda*mu is the
     same offset for every candidate, so min-max cancels it and neither lambda
     nor mu can change a score. The paper's Fig. 3 shows F1@10 on Inspec moving
@@ -146,14 +155,16 @@ class HCUKEScorer(Scorer):
             for s, total in row_total.items()
         }
 
-        # Normalize each factor before the Eq. (7) product, so that no factor
-        # can be negative and none dominates by raw scale. Not in the paper --
-        # see the class docstring's deviations ledger for why it is needed.
+        # Normalize the two unbounded factors before the Eq. (7) product, so
+        # that neither can be negative and neither dominates by raw scale. Not
+        # in the paper -- see the class docstring's deviations ledger. W(c) is
+        # passed through raw: it is already a softmax over candidates, so
+        # min-max would distort a deliberately weak signal rather than
+        # normalize it.
         norm_global = _min_max(global_sig)
         norm_local = _min_max(local_sig)
-        norm_weight = _min_max(candidate_weight)
         salience = {
-            s: norm_global[s] * norm_local[s] * norm_weight[s] for s in surfaces
+            s: norm_global[s] * norm_local[s] * candidate_weight[s] for s in surfaces
         }
         ranked = sorted(salience.items(), key=lambda kv: (-kv[1], kv[0]))
         top_surfaces = {surface for surface, _ in ranked[: self.top_k]}
