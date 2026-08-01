@@ -126,7 +126,7 @@ def test_with_replacement_paired_delta_is_bit_identical_for_a_fixed_seed():
     assert (d.estimate, d.lo, d.hi, d.prob_positive) == FROZEN_RESAMPLE_DELTA
 
 
-def test_subsample_paired_delta_is_seed_deterministic_and_rescaled():
+def test_subsample_paired_delta_is_seed_deterministic_and_is_the_identity_at_half():
     def run(seed: int):
         bundle_a, _ = _arm_a()
         bundle_b, _ = _arm_b()
@@ -150,3 +150,39 @@ def test_subsample_paired_delta_is_seed_deterministic_and_rescaled():
     # sqrt(4 / 8) = 0.707 shrank them 29% past it.
     assert sub.lo == pytest.approx(raw.lo, abs=1e-15)
     assert sub.hi == pytest.approx(raw.hi, abs=1e-15)
+
+
+def test_subsample_paired_delta_rescales_when_tau_is_not_one():
+    # The test above is the identity case, so on its own it would pass under
+    # any factor that equals 1 at m = n / 2. This one exercises the rescaling
+    # where it actually rescales, at a draw size the fixture can genuinely
+    # produce: holding one document fixed leaves an odd pool of n = 7, and
+    # subsample_size(7) = 4, so tau = sqrt(4 / (7 - 4)) = sqrt(4/3) = 1.1547.
+    #
+    # Note the direction. tau > 1 here, so the paired band is WIDER than
+    # reading the same deltas as full-size bootstrap draws — the opposite of
+    # what the pre-2026-08-01 sqrt(4 / 7) = 0.756 did. Odd pools are the
+    # common case in this project, so this is not an exotic corner.
+    bundle_a, _ = _arm_a()
+    bundle_b, _ = _arm_b()
+    fixed = ["d0"]
+    a = bootstrap(bundle_a, samples=500, seed=13, fixed_doc_ids=fixed, scheme="subsample")
+    b = bootstrap(bundle_b, samples=500, seed=13, fixed_doc_ids=fixed, scheme="subsample")
+    assert (a.scheme, a.m, a.n) == ("subsample", 4, 7)
+
+    sub = paired_delta(a.draws["b3-f1"], b.draws["b3-f1"], 0.42, 0.175, m=a.m, n=a.n)
+    raw = paired_delta(a.draws["b3-f1"], b.draws["b3-f1"], 0.42, 0.175)
+    tau = (4 / 3) ** 0.5
+
+    # Widened by exactly tau, not merely "wider".
+    assert (sub.hi - sub.lo) / (raw.hi - raw.lo) == pytest.approx(tau)
+
+    # But NOT a superset of the raw band, and the reason is worth stating: the
+    # rescaling is anchored on the observed delta (0.245), which on this
+    # fixture lies outside the raw quantile span [-0.116, 0.224] altogether.
+    # So the band scales about a point it does not contain, and moves as well
+    # as widens. Asserting containment here would be asserting a coincidence.
+    assert sub.lo < raw.lo and sub.hi < raw.hi
+    observed = 0.42 - 0.175
+    assert sub.lo == pytest.approx(observed + tau * (raw.lo - observed))
+    assert sub.hi == pytest.approx(observed + tau * (raw.hi - observed))

@@ -43,9 +43,11 @@ def _coverage(n: int, m: int, seed: int, *, report_n: int | None = None) -> floa
     """Fraction of TRIALS whose emitted interval contains the true mean.
 
     `report_n` exists to measure a *different* tau through the real
-    subsample_interval instead of reimplementing its arithmetic here: tau is
-    sqrt(m / (report_n - m)), so passing report_n = n + m yields sqrt(m / n) —
-    exactly the pre-2026-08-01 factor — over the identical draws.
+    subsample_interval instead of reimplementing its arithmetic here: the draws
+    are always m-out-of-n from the true pool, but the interval is told the pool
+    is `report_n`, and tau is sqrt(m / (report_n - m)). So report_n = n + m
+    yields sqrt(m / n) — exactly the pre-2026-08-01 factor — and report_n = 2m
+    yields a constant 1, both over the identical draws.
     """
     rng = random.Random(seed)
     hits = 0
@@ -58,23 +60,41 @@ def _coverage(n: int, m: int, seed: int, *, report_n: int | None = None) -> floa
     return hits / TRIALS
 
 
-def test_the_old_factor_is_reachable_through_the_public_function():
-    # Guards the trick _coverage uses for its negative control. If this ever
-    # stops holding, the undercoverage test below would silently be measuring
-    # the corrected factor twice and would pass vacuously.
-    for n, m in ((60, 30), (200, 100)):
-        assert _subsample_tau(m, n + m) == pytest.approx(math.sqrt(m / n))
+def test_the_substitute_factors_are_reachable_through_the_public_function():
+    # Guards the trick _coverage uses for its controls. tau is
+    # sqrt(m / (report_n - m)), so report_n = n + m yields the pre-10c
+    # sqrt(m / n) and report_n = 2m yields a constant 1. If either identity
+    # ever stops holding, the control tests below would silently be measuring
+    # the corrected factor again and would pass vacuously.
+    for n, m in ((60, 30), (200, 100), (200, 50)):
         assert _subsample_tau(m, n) == pytest.approx(math.sqrt(m / (n - m)))
+        assert _subsample_tau(m, n + m) == pytest.approx(math.sqrt(m / n))
+        assert _subsample_tau(m, 2 * m) == 1.0
 
 
-@pytest.mark.parametrize(("n", "seed"), [(60, 20260801), (200, 20260802)])
-def test_subsample_interval_covers_at_its_nominal_level(n, seed):
-    # Two pool sizes, both at the harness's own m = round(n / 2). The nominal
-    # level is 0.95; assert a band rather than a point because Monte Carlo
-    # coverage at 400 trials is an estimate and the interval is asymptotic.
-    m = round(n / 2)
+@pytest.mark.parametrize(
+    ("n", "m", "seed"),
+    [
+        (60, 30, 20260801),    # the harness's own draw size; tau == 1
+        (200, 100, 20260802),  # ditto, larger pool
+        (200, 50, 20260805),   # m = n / 4, where tau = sqrt(1/3) = 0.577 != 1
+    ],
+)
+def test_subsample_interval_covers_at_its_nominal_level(n, m, seed):
+    # The nominal level is 0.95; assert a band rather than a point because
+    # Monte Carlo coverage at 400 trials is an estimate and the interval is
+    # asymptotic.
+    #
+    # The third case is load-bearing and not redundant. At m = n / 2 the
+    # correct tau is exactly 1, so coverage there cannot distinguish
+    # sqrt(m / (n - m)) from ANY expression that happens to equal 1 at the
+    # half point — a hardcoded 1.0, m / (n - m) without the square root, even
+    # the inverted sqrt((n - m) / m). Only a draw size away from n / 2
+    # constrains the shape of the factor rather than one of its values.
     coverage = _coverage(n, m, seed)
-    assert 0.92 <= coverage <= 0.97, f"n={n}: coverage {coverage:.3f} outside [0.92, 0.97]"
+    assert 0.92 <= coverage <= 0.97, (
+        f"n={n}, m={m}: coverage {coverage:.3f} outside [0.92, 0.97]"
+    )
 
 
 @pytest.mark.parametrize(("n", "seed"), [(60, 20260801), (200, 20260802)])
@@ -85,7 +105,26 @@ def test_the_pre_10c_factor_undercovers_on_the_same_draws(n, seed):
     # near 83%. Without this assertion the fix has no evidence attached to it;
     # with it, reverting the factor fails loudly here rather than quietly
     # publishing an over-confident CI.
+    #
+    # Deliberately only at m = n / 2, which is where the harness draws and
+    # where the two factors are furthest apart. At m = n / 4 the old factor is
+    # 0.500 against a correct 0.577 — only 13% narrow — and it lands around
+    # 0.90-0.93, i.e. sometimes inside the band above. The old factor is not
+    # uniformly catastrophic; it is catastrophic at the draw size this project
+    # actually uses, and that is the claim worth pinning.
     m = round(n / 2)
     old = _coverage(n, m, seed, report_n=n + m)
     assert old < 0.90, f"n={n}: sqrt(m/n) coverage {old:.3f} was expected to undercover"
     assert old < _coverage(n, m, seed)
+
+
+def test_a_constant_tau_overcovers_away_from_the_half_point():
+    # The other side of the shape constraint. tau == 1 is right at m = n / 2
+    # and wrong everywhere else; at m = n / 4 the draws are genuinely more
+    # dispersed than the estimate and leaving them unscaled inflates the band.
+    # Nominal 95% becomes ~0.998 — an interval that is not wrong in the
+    # dangerous direction, but is not a 95% interval either.
+    n, m, seed = 200, 50, 20260805
+    flat = _coverage(n, m, seed, report_n=2 * m)
+    assert flat > 0.99, f"constant tau=1 coverage {flat:.3f} was expected to over-cover"
+    assert flat > _coverage(n, m, seed)

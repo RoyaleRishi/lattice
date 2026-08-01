@@ -32,21 +32,33 @@ class EdgeF1(Metric, Resamplable):
       therefore monotone in corpus size too, and predicted_edges is an unbounded
       raw count rather than a converging statistic.
 
-    So theta(m) < theta(n) deterministically for m < n. The draws sit
-    systematically below the point estimate and never straddle it, at any m,
-    under with-replacement and without-replacement draws alike. The subsample
-    rescaling corrects a variance *rate*; it cannot correct a monotone shift in
-    the estimand — and at the harness's m = round(n / 2) it barely rescales at
-    all, since the corrected tau = sqrt(m / (n - m)) is ~1.0008 there. Measured
-    on M4 food (m=656, n=1311): f1 estimate 0.3233, with every key except the
-    constant gold_edges excluding its own estimate. The band endpoints once
-    quoted here were computed under the pre-2026-08-01 sqrt(m / n) = 0.707 and
-    are dropped rather than recomputed by hand; read the current ones from a
-    regenerated reports/intervals/m4-food/. The qualitative claim — every band
-    sits below its estimate — is unaffected by construction, not by luck: the
-    rescaling is about the estimate, so sign(lo - estimate) is the same for
-    every tau > 0 and no change of factor can carry a band across the estimate
-    it excludes.
+    So theta(m) != theta(n) systematically for m < n: each key's draws sit on
+    one fixed side of the point estimate and never straddle it, at any m, under
+    with-replacement and without-replacement draws alike.
+
+    THE SIDE IS NOT THE SAME FOR EVERY KEY, and the two bullets above do not
+    determine it for all of them. They fix the direction for predicted_edges
+    and recall — both shrink with the sample — and f1 follows recall down.
+    Precision is the exception: its numerator and its denominator both shrink,
+    so the union argument leaves its direction open, and measurement puts it
+    the other way. On M4 food (m=656, n=1311) precision's band sits *above* its
+    estimate of 0.6148, while f1 (estimate 0.3233), recall and predicted_edges
+    all sit below theirs. Do not restate this paragraph as "the draws sit below
+    the estimate": what is universal here is exclusion, not direction.
+
+    The subsample rescaling corrects a variance *rate*; it cannot correct a
+    shift in the estimand — and at the harness's m = round(n / 2) it barely
+    rescales at all, since the corrected tau = sqrt(m / (n - m)) is ~1.0008
+    there. Every key except the constant gold_edges excludes its own estimate.
+    The band endpoints once quoted here were computed under the pre-2026-08-01
+    sqrt(m / n) = 0.707 and are dropped rather than recomputed by hand; read
+    the current ones from a regenerated reports/intervals/m4-food/. That
+    exclusion — and each key's side — survives the change of factor by
+    construction rather than by luck: the rescaling is about the estimate, so
+    sign(lo - estimate) is invariant in tau for every tau > 0 and no change of
+    factor can carry a band across an estimate it excludes. Which is why the
+    sides above could be stated from the pre-10c artifact without regenerating
+    it, while the endpoints could not.
 
     Read edge-f1's emitted band as a corpus-size sensitivity range, not a
     confidence interval. The report's `brackets_estimate` flag is False for
