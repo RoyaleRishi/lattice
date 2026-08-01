@@ -227,18 +227,29 @@ with respect to global significance. Measured on 60 Inspec test documents:
 
 Measured, same code, λ set to 0.0: F1@5/10/15 = 28.88 / 35.49 / 36.68.
 The paper's Figure 3 shows F1@10 varying by **less than one point** as λ
-sweeps 0 → 1.5; here it swings seventeen points. That is the diagnostic:
-§3.4 of the paper states the components are normalized before combination,
-and that step is missing.
+sweeps 0 → 1.5; here it swings seventeen points. Something the paper does
+is missing from this implementation.
+
+> **Correction (applied during execution).** An earlier draft of this task
+> asserted that §3.4 mandates normalizing the Eq. (7) factors. It does not.
+> §3.4 says only "simple filtering and normalization operations", and
+> Algorithm 1 line 19 forms the product from the raw factors. The fix below
+> is still correct, but its justification is **internal** — a product with a
+> negative factor inverts the ranking with respect to the other factors —
+> and the adapter docstring must not credit the paper for it.
 
 **Required changes:**
 
-1. **Normalize the three factors before multiplying.** Min-max normalize
-   `global_sig`, `local_sig`, and `candidate_weight` independently to
-   [0, 1] across the document's candidate set before computing
-   `salience = global_sig * local_sig * candidate_weight`. Guard the
-   degenerate case (all values equal → constant range of 0): map every
-   value to 1.0 rather than dividing by zero.
+1. **Normalize the unbounded factors before multiplying.** Min-max normalize
+   `global_sig` and `local_sig` independently to [0, 1] across the
+   document's candidate set before computing the product. Guard the
+   degenerate case (all values equal → range of 0): map every value to 1.0
+   rather than dividing by zero.
+
+   **Leave `candidate_weight` (W(c)) raw.** It comes out of `_softmax`, so
+   it is already a normalized distribution; stretching a softmax to span
+   [0, 1] is distortion, not normalization, and it inflates a signal the
+   paper deliberately keeps weak. Document the asymmetry as deliberate.
 2. **Compute μ over all n² ordered pairs including the diagonal**, per
    §3.4: `μ = (1/n)Σᵢ(1/n)Σⱼ dist(H_cᵢ, H_cⱼ)`. The current code averages
    unique off-diagonal pairs only (`hcuke.py:91-96`). Keep the existing
@@ -250,8 +261,12 @@ and that step is missing.
 
 **Do not change** the decontextualized-representation deviation (whole-string
 MiniLM vs the paper's max-pooled contextual BERT). It is real, already
-documented, and out of scope; the paper's own Table 3 sizes it at ~8 F1
-points, which explains the expected residual gap.
+documented, and out of scope. It is the dominant known contributor to the
+residual gap against the published numbers, but its size is **not**
+established — an earlier draft of this plan attributed ~8 F1 points to the
+paper's Table 3, and that attribution is wrong (the Table 3 Inspec F1@10
+spread is ~3.3 points). Do not quote a figure for it anywhere, here or in
+`docs/results`.
 
 **Tests:**
 
