@@ -15,9 +15,16 @@ from lattice.registry.registry import register
 @register(DocumentMetric, "f1-at-k")
 class F1AtK(DocumentMetric, Resamplable):
     """Literature-standard keyphrase evaluation (M2 spec §6.5): per document,
-    the top-k selected surfaces (salience desc, ties lexicographic) are
-    compared to gold keyphrases as Snowball-stemmed exact phrase matches;
-    precision/recall/F1 are macro-averaged over documents.
+    selected mentions are deduped by Snowball stem *before* truncation --
+    keeping the highest-salience surface's stem as the representative for
+    each distinct stem -- and only then ranked (salience desc, ties
+    lexicographic by stem) and truncated to the top k. Precision divides by
+    the truncated stem count, i.e. min(k, n_distinct_stems), rather than by
+    a stemmed-and-deduped-again set whose size can shrink below k when two
+    surfaces in the top-k collide on stem. Dedupe-then-truncate matches the
+    literature protocol (e.g. HCUKE §4.1), keeping reported numbers
+    comparable to published baseline tables; recall/F1 are then computed
+    against the stemmed gold keyphrases and macro-averaged over documents.
 
     Requires the scorer's top_k >= max(ks): rankings are computed over the
     scorer-selected mentions, so metrics at k beyond the scorer's selection
@@ -33,11 +40,16 @@ class F1AtK(DocumentMetric, Resamplable):
         return " ".join(self._stemmer.stemWords(phrase.lower().split()))
 
     def _ranked_unique_surfaces(self, delta: GraphDelta) -> list[str]:
+        """Dedupe selected mentions by stem (keeping the max salience seen
+        for each stem), then rank stems by salience desc, ties lexicographic
+        by stem. Returns stems, not surfaces: callers compare directly
+        against the (already-stemmed) gold set with no second stemming
+        pass."""
         best: dict[str, float] = {}
         for scored in delta.selected_mentions:
-            surface = scored.mention.surface
-            if surface not in best or scored.salience > best[surface]:
-                best[surface] = scored.salience
+            stem = self._stem_phrase(scored.mention.surface)
+            if stem not in best or scored.salience > best[stem]:
+                best[stem] = scored.salience
         return [s for s, _ in sorted(best.items(), key=lambda kv: (-kv[1], kv[0]))]
 
     def _per_document_scores(
@@ -49,7 +61,7 @@ class F1AtK(DocumentMetric, Resamplable):
         ranked = self._ranked_unique_surfaces(delta)
         scores: dict[str, float] = {}
         for k in self.ks:
-            predicted = {self._stem_phrase(s) for s in ranked[:k]}
+            predicted = set(ranked[:k])
             tp = len(gold & predicted)
             precision = tp / len(predicted) if predicted else 0.0
             recall = tp / len(gold) if gold else 0.0
