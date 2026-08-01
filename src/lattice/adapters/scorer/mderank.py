@@ -19,17 +19,30 @@ class MDERankScorer(Scorer):
     Documented deviations: candidates come from the pipeline's injected
     Extractor (paper: POS regex); embeddings from the injected Embedder
     (paper: BERT last layer + max-pooling); "[MASK]" is a literal placeholder
-    for the MiniLM family. Inspec abstracts (~122 words) fit MiniLM's
-    256-token window, so no truncation handling (spec §6.6)."""
+    for the MiniLM family. Documents exceeding the embedder's context window
+    are not truncation-handled: 61 of 500 Inspec test abstracts exceed
+    MiniLM's 256 word-piece window (median 158, max 497 word-pieces). Past
+    the cutoff, masking a candidate is a no-op on the truncated input, so its
+    masked-document embedding is (near-)identical to the unmasked one and its
+    salience collapses toward zero (in the longest document, 22 such
+    candidates score exactly 2.22e-16, versus a mean of 0.0852 for candidates
+    whose first occurrence falls before the cutoff). This is detected, not
+    prevented: `self.degenerate_surfaces` counts surfaces whose salience is
+    `<= 1e-12` after each `score()` call, so a harness can surface it, but
+    those candidates still receive a (degenerate) ranking rather than being
+    dropped or raising — a partially-truncated document still yields a
+    usable ranking for its early candidates."""
 
     def __init__(self, embedder: Embedder, top_k: int = 10, mask_token: str = "[MASK]"):
         self.embedder = embedder
         self.top_k = top_k
         self.mask_token = mask_token
+        self.degenerate_surfaces: int = 0
 
     def score(
         self, mentions: Sequence[Mention], units: Sequence[Unit]
     ) -> list[ScoredMention]:
+        self.degenerate_surfaces = 0
         if not mentions:
             return []
         document_text = "\n".join(unit.text for unit in units)
@@ -47,6 +60,7 @@ class MDERankScorer(Scorer):
             surface: 1.0 - cosine(document_vector, masked_vector)
             for surface, masked_vector in zip(surfaces, masked_vectors)
         }
+        self.degenerate_surfaces = sum(1 for value in salience.values() if value <= 1e-12)
         ranked = sorted(salience.items(), key=lambda kv: (-kv[1], kv[0]))
         top_surfaces = {surface for surface, _ in ranked[: self.top_k]}
         return [
