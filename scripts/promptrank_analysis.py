@@ -36,8 +36,11 @@ def _f1atk(path: str):
 def paired(incumbent_path: str, incumbent_label: str) -> dict:
     pr_est, pr_bundle = _f1atk(PROMPTRANK_CONFIG)
     in_est, in_bundle = _f1atk(incumbent_path)
-    pr_res = bootstrap(pr_bundle, samples=ITEM_SAMPLES, seed=SEED)
-    in_res = bootstrap(in_bundle, samples=ITEM_SAMPLES, seed=SEED)
+    # f1-at-k is a macro metric (per-document mean), so the classical
+    # n-out-of-n bootstrap is the right scheme and these numbers are unchanged
+    # by the pooled-metric subsampling fix.
+    pr_res = bootstrap(pr_bundle, samples=ITEM_SAMPLES, seed=SEED).draws
+    in_res = bootstrap(in_bundle, samples=ITEM_SAMPLES, seed=SEED).draws
     rows = []
     for k in KS:
         d: DeltaResult = paired_delta(pr_res[k], in_res[k], pr_est[k], in_est[k], level=LEVEL)

@@ -1,5 +1,8 @@
-"""Bootstrap confidence intervals. Percentile and BCa (bias-corrected and
-accelerated); paired delta for comparative claims. Stdlib only —
+"""Confidence intervals over resampling draws. Percentile and BCa
+(bias-corrected and accelerated) for n-out-of-n bootstrap draws; a rescaled
+construction for m-out-of-n subsampling draws; paired delta for comparative
+claims. BCa is only valid for the "resample" scheme — it assumes the draws are
+a bootstrap distribution at the full sample size. Stdlib only —
 statistics.NormalDist supplies the normal CDF and its inverse."""
 
 import math
@@ -41,6 +44,46 @@ def percentile_interval(estimate: float, resamples: list[float], level: float = 
     s = sorted(resamples)
     a = (1 - level) / 2
     return Interval(_percentile(s, a), _percentile(s, 1 - a), "percentile")
+
+
+def subsample_interval(
+    estimate: float,
+    subsamples: list[float],
+    *,
+    m: int,
+    n: int,
+    level: float = 0.95,
+) -> Interval:
+    """m-out-of-n subsampling interval (Politis, Romano & Wolf, *Subsampling*,
+    1999). The draws come from size-m replicates, which are more variable than
+    the full size-n sample by the convergence rate sqrt(n / m); the correction
+    is to lay the draw quantiles back around the point estimate shrunk by
+    tau = sqrt(m / n):
+
+        lo = estimate + tau * (q(alpha/2)     - estimate)
+        hi = estimate + tau * (q(1 - alpha/2) - estimate)
+
+    Unlike a raw percentile interval over subsample draws this is anchored on
+    the estimate, so it brackets it whenever the draws straddle it, and when
+    they all sit to one side it shrinks toward the estimate instead of
+    reporting a band that excludes it. tau == 1 (m == n) reduces exactly to the
+    percentile interval.
+
+    n == 0 means every document was held fixed: there is nothing to resample,
+    so the honest answer is a zero-width interval at the estimate.
+    """
+    if not subsamples:
+        raise ValueError("subsample_interval requires at least one draw")
+    if n == 0:
+        return Interval(estimate, estimate, "degenerate")
+    if not 0 < m <= n:
+        raise ValueError(f"subsample_interval requires 0 < m <= n (got m={m}, n={n})")
+    s = sorted(subsamples)
+    a = (1 - level) / 2
+    tau = math.sqrt(m / n)
+    lo = estimate + tau * (_percentile(s, a) - estimate)
+    hi = estimate + tau * (_percentile(s, 1 - a) - estimate)
+    return Interval(lo, hi, "subsample")
 
 
 def bca_interval(

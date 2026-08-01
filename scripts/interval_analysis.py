@@ -14,6 +14,19 @@ an out-of-sample replication check of the resolver-improvement claim.
 
 Writes JSON to <out_dir>/{m3-paired-delta,m3-threshold-curve,permutation-spread}.json
 (gitignored, regenerable) and prints a human-readable summary to stdout.
+
+Known limitation: `clustering` is a *pooled* metric, so its n-out-of-n
+bootstrap draws carry the with-replacement duplication bias that
+`lattice.harness.stats.report` now avoids by subsampling pooled bundles
+(scheme="subsample"). This script deliberately still passes the default
+scheme="resample", because both of its constructions here — `paired_delta` and
+`bca_interval` — assume full-size bootstrap draws and have no subsampling
+counterpart yet, and because the numbers in
+docs/results/2026-07-14-interval-analysis.md were published from this scheme.
+Moving it needs a paired/accelerated subsampling design; until then read the
+absolute b3-f1 CI widths here as optimistic. The *paired delta* is the less
+affected quantity: both arms are drawn with the same seed, so the duplication
+artifact is common to the pair and largely differences out.
 """
 
 import json
@@ -76,8 +89,8 @@ def m3_paired_delta(corpus: str) -> dict:
     nn090_cfg = _load(M3_CONFIGS[corpus]["nn@0.90"])
     est_exact, exact_bundle = _clustering_bundle(exact_cfg)
     est_nn090, nn090_bundle = _clustering_bundle(nn090_cfg)
-    exact_resamples = bootstrap(exact_bundle, samples=ITEM_SAMPLES, seed=BOOTSTRAP_SEED)
-    nn090_resamples = bootstrap(nn090_bundle, samples=ITEM_SAMPLES, seed=BOOTSTRAP_SEED)
+    exact_resamples = bootstrap(exact_bundle, samples=ITEM_SAMPLES, seed=BOOTSTRAP_SEED).draws
+    nn090_resamples = bootstrap(nn090_bundle, samples=ITEM_SAMPLES, seed=BOOTSTRAP_SEED).draws
     delta: DeltaResult = paired_delta(
         nn090_resamples["b3-f1"], exact_resamples["b3-f1"], est_nn090, est_exact, level=LEVEL
     )
@@ -102,7 +115,7 @@ def m3_threshold_curve(corpus: str) -> list[dict]:
     for threshold in THRESHOLD_GRID:
         cfg = base_cfg if threshold == OPERATING_THRESHOLD else _with_threshold(base_cfg, threshold)
         estimate, bundle = _clustering_bundle(cfg)
-        resamples = bootstrap(bundle, samples=ITEM_SAMPLES, seed=BOOTSTRAP_SEED)
+        resamples = bootstrap(bundle, samples=ITEM_SAMPLES, seed=BOOTSTRAP_SEED).draws
         jack = jackknife(bundle)
         ci: Interval = bca_interval(estimate, resamples["b3-f1"], jack["b3-f1"], level=LEVEL)
         rows.append({
