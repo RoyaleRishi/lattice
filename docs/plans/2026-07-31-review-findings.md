@@ -348,10 +348,17 @@ why (comparability with published tables).
 `mderank.py:20-23` asserts "Inspec abstracts (~122 words) fit MiniLM's
 256-token window, so no truncation handling". That claim is false:
 61/500 Inspec test abstracts exceed 256 word-pieces (median 158, max 497).
-For the longest document, 22 candidates whose first occurrence falls past
-the truncation point receive salience of exactly 2.22e-16 — masking beyond
-the cutoff is a no-op, so `cos = 1` and `1 − cos ≈ 0`. Those candidates are
-silently unrankable.
+Masking beyond the cutoff is a no-op, so `cos = 1` and `1 − cos ≈ 0`, and
+those candidates are silently unrankable.
+
+> **Correction (applied during execution).** An earlier draft of this task
+> said the longest document had 22 such candidates scoring "exactly
+> 2.22e-16". Re-measured against the real Inspec split and the real MiniLM
+> tokenizer: the longest document is id `392`, it yields **60** distinct
+> candidate surfaces of which **28** are degenerate, the mean salience of
+> the non-degenerate remainder is **0.0242**, and the degenerate values are
+> **−2.22e-16** (negative). The `61/500`, median `158` and max `497` figures
+> are confirmed correct. Use only the re-measured numbers.
 
 **Required changes:**
 
