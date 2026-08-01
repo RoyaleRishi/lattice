@@ -674,6 +674,46 @@ brackets its point estimate.
 
 ---
 
+## Task 10b — Give the paired delta a subsampling counterpart
+
+**Added during execution.** Task 10 fixed `bootstrap()` and the report path,
+but `paired_delta` and `bca_interval` have no subsampling counterpart, so
+`scripts/interval_analysis.py` still runs the **biased** with-replacement
+scheme over the pooled `clustering` bundle. That script produces the M3
+paired delta — the exact number the README quotes as its identity headline
+(ConEL-2 Δ=+0.0105 [0.0029, 0.0163]). Task 14 cannot restate the identity
+claim honestly while its CI comes from the path Task 10 proved biased.
+
+Task 10 established the bias is real and material on this very corpus: M3
+ConEL-2 clustering ARI, estimate 0.8036, moved from `[0.8278, 0.9468]` —
+an interval lying entirely **above** its own estimate in a shipped report —
+to `[0.7300, 0.8699]`, which brackets.
+
+**Required changes:**
+
+1. Add a paired subsample path. Two configs' draws must use identical
+   document index sets per iteration, exactly as the with-replacement
+   paired path does today — `random.Random(seed)` constructed freshly per
+   `bootstrap()` call over insertion-ordered pools already guarantees
+   this; preserve that property with `rng.sample`.
+2. `paired_delta` must accept subsample draws and apply the same
+   √(m/n) rescaling to the delta distribution that `subsample_interval`
+   applies to a single statistic, anchored on the observed delta.
+3. BCa stays unreachable from the subsample path (Task 10's rule).
+4. Update `scripts/interval_analysis.py` to use the paired subsample path
+   for pooled bundles, and remove the in-code note Task 10 left saying it
+   still uses the biased scheme.
+5. Extend the three-way M3 comparison from Task 7: the script should be
+   able to produce paired deltas for `stemmed-label − exact-label` and
+   `embedding-nn@0.90 − stemmed-label`, not only the original pair.
+
+**Tests:** paired subsample draws are index-aligned across two bundles
+(assert the same document ids per iteration); the rescaling matches a
+hand-computed example; `paired_delta`'s existing equal-length guard still
+holds; the with-replacement paired path is bit-identical for a fixed seed.
+
+**Do not** regenerate reports here — Task 12 owns that.
+
 ## Task 11 — Continuous integration, and track the evidence
 
 **Files:** new `.github/workflows/ci.yml`, `.gitignore`,
