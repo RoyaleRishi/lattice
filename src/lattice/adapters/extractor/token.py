@@ -33,8 +33,6 @@ class TokenExtractor(Extractor):
                         unit_id=unit.id,
                         span=(match.start(), match.end()),
                         context=unit.text,
-                        head=word.lower(),
-                        lemma=word.lower(),
                     )
                 )
         return mentions

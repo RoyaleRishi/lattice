@@ -38,8 +38,6 @@ class NounChunkExtractor(Extractor):
                         unit_id=unit.id,
                         span=(start, end),
                         context=unit.text,
-                        head=chunk.root.text.lower(),
-                        lemma=" ".join(t.lemma_ for t in tokens).lower(),
                     )
                 )
         return mentions

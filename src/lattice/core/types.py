@@ -18,13 +18,15 @@ class Document:
 
 @dataclass(frozen=True, slots=True)
 class Unit:
-    """An ordered segment of a document (turn, block, or sentence)."""
+    """An ordered segment of a document (block or sentence). `kind` is
+    currently "block" or "sentence"; `speaker` is reserved for a future turn
+    segmenter and is unpopulated by the built-in segmenters."""
 
     id: str
     document_id: str
     text: str
     order: int
-    kind: str  # "turn" | "block" | "sentence"
+    kind: str  # "block" | "sentence"
     speaker: str | None = None
 
 
@@ -37,8 +39,6 @@ class Mention:
     unit_id: str
     span: tuple[int, int]
     context: str
-    head: str = ""
-    lemma: str = ""
 
 
 @dataclass(frozen=True, slots=True)

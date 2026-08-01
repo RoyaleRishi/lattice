@@ -32,10 +32,7 @@ def make_mention(
     span: tuple[int, int] = (0, 7),
     context: str = "concept text",
 ) -> Mention:
-    return Mention(
-        surface=surface, unit_id=unit_id, span=span, context=context,
-        head=surface, lemma=surface,
-    )
+    return Mention(surface=surface, unit_id=unit_id, span=span, context=context)
 
 
 def make_scored_mention(

@@ -34,7 +34,6 @@ def test_unit_speaker_defaults_to_none():
 def test_mention_span_is_tuple():
     m = Mention(surface="vector", unit_id="d1:u0", span=(4, 10), context="the vector store")
     assert m.span == (4, 10)
-    assert m.head == "" and m.lemma == ""
 
 
 def test_scored_mention_wraps_mention():
