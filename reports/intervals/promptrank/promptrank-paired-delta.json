@@ -1,0 +1,34 @@
+{
+  "incumbent_label": "embedding-cosine",
+  "samples": 10000,
+  "seed": 0,
+  "rows": [
+    {
+      "metric": "f1@5",
+      "promptrank": 0.315197523932863,
+      "incumbent": 0.29669509184546233,
+      "delta_estimate": 0.018502432087400655,
+      "ci_lo": 0.006219080850345544,
+      "ci_hi": 0.031199383686236745,
+      "prob_positive": 0.998
+    },
+    {
+      "metric": "f1@10",
+      "promptrank": 0.3515419297724152,
+      "incumbent": 0.3546870302156691,
+      "delta_estimate": -0.00314510044325389,
+      "ci_lo": -0.011404357446893106,
+      "ci_hi": 0.0050709726262706594,
+      "prob_positive": 0.2225
+    },
+    {
+      "metric": "f1@15",
+      "promptrank": 0.34903329564075436,
+      "incumbent": 0.35545236519207857,
+      "delta_estimate": -0.006419069551324208,
+      "ci_lo": -0.01263979917754448,
+      "ci_hi": -8.534508126767708e-05,
+      "prob_positive": 0.023
+    }
+  ]
+}

@@ -1,0 +1,328 @@
+{
+  "runs": [
+    {
+      "config": {
+        "concept_store": {
+          "name": "in-memory",
+          "params": {}
+        },
+        "dataset": {
+          "name": "taxonomy",
+          "params": {
+            "gold": "food",
+            "root": "data/texeval"
+          }
+        },
+        "document_metrics": [],
+        "embedder": {
+          "name": "hashing",
+          "params": {}
+        },
+        "extractor": {
+          "name": "gazetteer",
+          "params": {
+            "gold": "food",
+            "root": "data/texeval"
+          }
+        },
+        "graph_integrator": {
+          "name": "in-memory",
+          "params": {}
+        },
+        "metrics": [
+          {
+            "name": "edge-f1",
+            "params": {}
+          }
+        ],
+        "relation_inducer": {
+          "name": "compound",
+          "params": {}
+        },
+        "resolver": {
+          "name": "exact-label",
+          "params": {}
+        },
+        "run": {
+          "on_error": "fail",
+          "seed": 0
+        },
+        "scorer": {
+          "name": "passthrough",
+          "params": {}
+        },
+        "segmenter": {
+          "name": "block",
+          "params": {}
+        }
+      },
+      "documents_processed": 1312,
+      "errors": [],
+      "metrics": {
+        "edge-f1": {
+          "f1": 0.2688064192577733,
+          "gold_edges": 1587.0,
+          "precision": 0.6584766584766585,
+          "predicted_edges": 407.0,
+          "recall": 0.1688720856962823
+        }
+      }
+    },
+    {
+      "config": {
+        "concept_store": {
+          "name": "in-memory",
+          "params": {}
+        },
+        "dataset": {
+          "name": "taxonomy",
+          "params": {
+            "gold": "food",
+            "root": "data/texeval"
+          }
+        },
+        "document_metrics": [],
+        "embedder": {
+          "name": "hashing",
+          "params": {}
+        },
+        "extractor": {
+          "name": "gazetteer",
+          "params": {
+            "gold": "food",
+            "root": "data/texeval"
+          }
+        },
+        "graph_integrator": {
+          "name": "in-memory",
+          "params": {}
+        },
+        "metrics": [
+          {
+            "name": "edge-f1",
+            "params": {}
+          }
+        ],
+        "relation_inducer": {
+          "name": "hearst",
+          "params": {}
+        },
+        "resolver": {
+          "name": "exact-label",
+          "params": {}
+        },
+        "run": {
+          "on_error": "fail",
+          "seed": 0
+        },
+        "scorer": {
+          "name": "passthrough",
+          "params": {}
+        },
+        "segmenter": {
+          "name": "block",
+          "params": {}
+        }
+      },
+      "documents_processed": 1312,
+      "errors": [],
+      "metrics": {
+        "edge-f1": {
+          "f1": 0.13065326633165827,
+          "gold_edges": 1587.0,
+          "precision": 0.5735294117647058,
+          "predicted_edges": 204.0,
+          "recall": 0.07372400756143667
+        }
+      }
+    },
+    {
+      "config": {
+        "concept_store": {
+          "name": "in-memory",
+          "params": {}
+        },
+        "dataset": {
+          "name": "taxonomy",
+          "params": {
+            "gold": "food",
+            "root": "data/texeval"
+          }
+        },
+        "document_metrics": [],
+        "embedder": {
+          "name": "hashing",
+          "params": {}
+        },
+        "extractor": {
+          "name": "gazetteer",
+          "params": {
+            "gold": "food",
+            "root": "data/texeval"
+          }
+        },
+        "graph_integrator": {
+          "name": "in-memory",
+          "params": {}
+        },
+        "metrics": [
+          {
+            "name": "edge-f1",
+            "params": {}
+          }
+        ],
+        "relation_inducer": {
+          "name": "union",
+          "params": {
+            "members": [
+              {
+                "name": "hearst"
+              },
+              {
+                "name": "compound"
+              }
+            ]
+          }
+        },
+        "resolver": {
+          "name": "exact-label",
+          "params": {}
+        },
+        "run": {
+          "on_error": "fail",
+          "seed": 0
+        },
+        "scorer": {
+          "name": "passthrough",
+          "params": {}
+        },
+        "segmenter": {
+          "name": "block",
+          "params": {}
+        }
+      },
+      "documents_processed": 1312,
+      "errors": [],
+      "metrics": {
+        "edge-f1": {
+          "f1": 0.323269856014863,
+          "gold_edges": 1587.0,
+          "precision": 0.6148409893992933,
+          "predicted_edges": 566.0,
+          "recall": 0.21928166351606806
+        }
+      }
+    }
+  ],
+  "sweep": {
+    "axes": {
+      "relation_inducer": [
+        {
+          "name": "compound",
+          "params": {}
+        },
+        {
+          "name": "hearst",
+          "params": {}
+        },
+        {
+          "name": "union",
+          "params": {
+            "members": [
+              {
+                "name": "hearst"
+              },
+              {
+                "name": "compound"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "base": {
+      "concept_store": {
+        "name": "in-memory",
+        "params": {}
+      },
+      "dataset": {
+        "name": "taxonomy",
+        "params": {
+          "gold": "food",
+          "root": "data/texeval"
+        }
+      },
+      "document_metrics": [],
+      "embedder": {
+        "name": "hashing",
+        "params": {}
+      },
+      "extractor": {
+        "name": "gazetteer",
+        "params": {
+          "gold": "food",
+          "root": "data/texeval"
+        }
+      },
+      "graph_integrator": {
+        "name": "in-memory",
+        "params": {}
+      },
+      "metrics": [
+        {
+          "name": "edge-f1",
+          "params": {}
+        }
+      ],
+      "relation_inducer": {
+        "name": "compound",
+        "params": {}
+      },
+      "resolver": {
+        "name": "exact-label",
+        "params": {}
+      },
+      "run": {
+        "on_error": "fail",
+        "seed": 0
+      },
+      "scorer": {
+        "name": "passthrough",
+        "params": {}
+      },
+      "segmenter": {
+        "name": "block",
+        "params": {}
+      }
+    }
+  },
+  "table": [
+    {
+      "axis:relation_inducer": "compound",
+      "edge-f1.f1": 0.2688064192577733,
+      "edge-f1.gold_edges": 1587.0,
+      "edge-f1.precision": 0.6584766584766585,
+      "edge-f1.predicted_edges": 407.0,
+      "edge-f1.recall": 0.1688720856962823,
+      "errors": 0
+    },
+    {
+      "axis:relation_inducer": "hearst",
+      "edge-f1.f1": 0.13065326633165827,
+      "edge-f1.gold_edges": 1587.0,
+      "edge-f1.precision": 0.5735294117647058,
+      "edge-f1.predicted_edges": 204.0,
+      "edge-f1.recall": 0.07372400756143667,
+      "errors": 0
+    },
+    {
+      "axis:relation_inducer": "union",
+      "edge-f1.f1": 0.323269856014863,
+      "edge-f1.gold_edges": 1587.0,
+      "edge-f1.precision": 0.6148409893992933,
+      "edge-f1.predicted_edges": 566.0,
+      "edge-f1.recall": 0.21928166351606806,
+      "errors": 0
+    }
+  ]
+}

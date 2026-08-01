@@ -5,6 +5,11 @@ __pycache__/
 dist/
 *.egg-info/
 data/
-reports/
+# Keep the small JSON/markdown evidence reports tracked (they back the
+# README's published numbers); ignore anything else that lands in here.
+reports/*
+!reports/**/
+!reports/**/*.json
+!reports/**/*.md
 docs/papers/
 .superpowers/

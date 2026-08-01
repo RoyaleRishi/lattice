@@ -1,0 +1,118 @@
+{
+  "config": {
+    "concept_store": {
+      "name": "in-memory",
+      "params": {}
+    },
+    "dataset": {
+      "name": "mention-clusters",
+      "params": {
+        "root": "data/conel2",
+        "split": "test"
+      }
+    },
+    "document_metrics": [
+      {
+        "name": "clustering",
+        "params": {}
+      }
+    ],
+    "embedder": {
+      "name": "sentence-transformer",
+      "params": {}
+    },
+    "extractor": {
+      "name": "gold-mentions",
+      "params": {
+        "root": "data/conel2",
+        "split": "test"
+      }
+    },
+    "graph_integrator": {
+      "name": "in-memory",
+      "params": {}
+    },
+    "metrics": [],
+    "relation_inducer": {
+      "name": "co-occurrence",
+      "params": {}
+    },
+    "resolver": {
+      "name": "embedding-nn",
+      "params": {
+        "threshold": 0.9
+      }
+    },
+    "run": {
+      "on_error": "fail",
+      "seed": 0
+    },
+    "scorer": {
+      "name": "passthrough",
+      "params": {}
+    },
+    "segmenter": {
+      "name": "block",
+      "params": {}
+    }
+  },
+  "level": 0.95,
+  "metrics": {
+    "clustering": {
+      "ari": {
+        "bca": {
+          "hi": 0.9467830514060052,
+          "lo": 0.8278002802466882,
+          "method": "percentile-fallback"
+        },
+        "estimate": 0.8035961223220544,
+        "percentile": {
+          "hi": 0.9467830514060052,
+          "lo": 0.8278002802466882,
+          "method": "percentile"
+        }
+      },
+      "b3-f1": {
+        "bca": {
+          "hi": 0.9552079203495055,
+          "lo": 0.9266825303508863,
+          "method": "bca"
+        },
+        "estimate": 0.9491453610194666,
+        "percentile": {
+          "hi": 0.9698742782068666,
+          "lo": 0.9430667346753554,
+          "method": "percentile"
+        }
+      },
+      "b3-precision": {
+        "bca": {
+          "hi": 1.0,
+          "lo": 0.9917920643888252,
+          "method": "bca"
+        },
+        "estimate": 0.9977876106194691,
+        "percentile": {
+          "hi": 1.0,
+          "lo": 0.9949152542372882,
+          "method": "percentile"
+        }
+      },
+      "b3-recall": {
+        "bca": {
+          "hi": 0.9167479749220944,
+          "lo": 0.8635547040351232,
+          "method": "bca"
+        },
+        "estimate": 0.905025284450063,
+        "percentile": {
+          "hi": 0.942782970918412,
+          "lo": 0.8930330919148868,
+          "method": "percentile"
+        }
+      }
+    }
+  },
+  "samples": 10000,
+  "seed": 0
+}

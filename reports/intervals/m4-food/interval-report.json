@@ -1,0 +1,133 @@
+{
+  "config": {
+    "concept_store": {
+      "name": "in-memory",
+      "params": {}
+    },
+    "dataset": {
+      "name": "taxonomy",
+      "params": {
+        "gold": "food",
+        "root": "data/texeval"
+      }
+    },
+    "document_metrics": [],
+    "embedder": {
+      "name": "hashing",
+      "params": {}
+    },
+    "extractor": {
+      "name": "gazetteer",
+      "params": {
+        "gold": "food",
+        "root": "data/texeval"
+      }
+    },
+    "graph_integrator": {
+      "name": "in-memory",
+      "params": {}
+    },
+    "metrics": [
+      {
+        "name": "edge-f1",
+        "params": {}
+      }
+    ],
+    "relation_inducer": {
+      "name": "union",
+      "params": {
+        "members": [
+          {
+            "name": "hearst"
+          },
+          {
+            "name": "compound"
+          }
+        ]
+      }
+    },
+    "resolver": {
+      "name": "exact-label",
+      "params": {}
+    },
+    "run": {
+      "on_error": "fail",
+      "seed": 0
+    },
+    "scorer": {
+      "name": "passthrough",
+      "params": {}
+    },
+    "segmenter": {
+      "name": "block",
+      "params": {}
+    }
+  },
+  "level": 0.95,
+  "metrics": {
+    "edge-f1": {
+      "f1": {
+        "brackets_estimate": false,
+        "estimate": 0.323269856014863,
+        "m": 656,
+        "n": 1311,
+        "scheme": "subsample",
+        "subsample": {
+          "hi": 0.30383192993211516,
+          "lo": 0.28942240089533217,
+          "method": "subsample"
+        }
+      },
+      "gold_edges": {
+        "brackets_estimate": true,
+        "estimate": 1587.0,
+        "m": 656,
+        "n": 1311,
+        "scheme": "subsample",
+        "subsample": {
+          "hi": 1587.0,
+          "lo": 1587.0,
+          "method": "subsample"
+        }
+      },
+      "precision": {
+        "brackets_estimate": false,
+        "estimate": 0.6148409893992933,
+        "m": 656,
+        "n": 1311,
+        "scheme": "subsample",
+        "subsample": {
+          "hi": 0.6453859753462267,
+          "lo": 0.6190508289905877,
+          "method": "subsample"
+        }
+      },
+      "predicted_edges": {
+        "brackets_estimate": false,
+        "estimate": 566.0,
+        "m": 656,
+        "n": 1311,
+        "scheme": "subsample",
+        "subsample": {
+          "hi": 497.94811140030913,
+          "lo": 474.9305608445313,
+          "method": "subsample"
+        }
+      },
+      "recall": {
+        "brackets_estimate": false,
+        "estimate": 0.21928166351606806,
+        "m": 656,
+        "n": 1311,
+        "scheme": "subsample",
+        "subsample": {
+          "hi": 0.19910244602107097,
+          "lo": 0.18838223672685375,
+          "method": "subsample"
+        }
+      }
+    }
+  },
+  "samples": 10000,
+  "seed": 0
+}

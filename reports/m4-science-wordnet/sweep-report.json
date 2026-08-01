@@ -1,0 +1,328 @@
+{
+  "runs": [
+    {
+      "config": {
+        "concept_store": {
+          "name": "in-memory",
+          "params": {}
+        },
+        "dataset": {
+          "name": "taxonomy",
+          "params": {
+            "gold": "science-wordnet",
+            "root": "data/texeval"
+          }
+        },
+        "document_metrics": [],
+        "embedder": {
+          "name": "hashing",
+          "params": {}
+        },
+        "extractor": {
+          "name": "gazetteer",
+          "params": {
+            "gold": "science-wordnet",
+            "root": "data/texeval"
+          }
+        },
+        "graph_integrator": {
+          "name": "in-memory",
+          "params": {}
+        },
+        "metrics": [
+          {
+            "name": "edge-f1",
+            "params": {}
+          }
+        ],
+        "relation_inducer": {
+          "name": "compound",
+          "params": {}
+        },
+        "resolver": {
+          "name": "exact-label",
+          "params": {}
+        },
+        "run": {
+          "on_error": "fail",
+          "seed": 0
+        },
+        "scorer": {
+          "name": "passthrough",
+          "params": {}
+        },
+        "segmenter": {
+          "name": "block",
+          "params": {}
+        }
+      },
+      "documents_processed": 355,
+      "errors": [],
+      "metrics": {
+        "edge-f1": {
+          "f1": 0.3119266055045872,
+          "gold_edges": 441.0,
+          "precision": 0.8173076923076923,
+          "predicted_edges": 104.0,
+          "recall": 0.1927437641723356
+        }
+      }
+    },
+    {
+      "config": {
+        "concept_store": {
+          "name": "in-memory",
+          "params": {}
+        },
+        "dataset": {
+          "name": "taxonomy",
+          "params": {
+            "gold": "science-wordnet",
+            "root": "data/texeval"
+          }
+        },
+        "document_metrics": [],
+        "embedder": {
+          "name": "hashing",
+          "params": {}
+        },
+        "extractor": {
+          "name": "gazetteer",
+          "params": {
+            "gold": "science-wordnet",
+            "root": "data/texeval"
+          }
+        },
+        "graph_integrator": {
+          "name": "in-memory",
+          "params": {}
+        },
+        "metrics": [
+          {
+            "name": "edge-f1",
+            "params": {}
+          }
+        ],
+        "relation_inducer": {
+          "name": "hearst",
+          "params": {}
+        },
+        "resolver": {
+          "name": "exact-label",
+          "params": {}
+        },
+        "run": {
+          "on_error": "fail",
+          "seed": 0
+        },
+        "scorer": {
+          "name": "passthrough",
+          "params": {}
+        },
+        "segmenter": {
+          "name": "block",
+          "params": {}
+        }
+      },
+      "documents_processed": 355,
+      "errors": [],
+      "metrics": {
+        "edge-f1": {
+          "f1": 0.008988764044943821,
+          "gold_edges": 441.0,
+          "precision": 0.5,
+          "predicted_edges": 4.0,
+          "recall": 0.0045351473922902496
+        }
+      }
+    },
+    {
+      "config": {
+        "concept_store": {
+          "name": "in-memory",
+          "params": {}
+        },
+        "dataset": {
+          "name": "taxonomy",
+          "params": {
+            "gold": "science-wordnet",
+            "root": "data/texeval"
+          }
+        },
+        "document_metrics": [],
+        "embedder": {
+          "name": "hashing",
+          "params": {}
+        },
+        "extractor": {
+          "name": "gazetteer",
+          "params": {
+            "gold": "science-wordnet",
+            "root": "data/texeval"
+          }
+        },
+        "graph_integrator": {
+          "name": "in-memory",
+          "params": {}
+        },
+        "metrics": [
+          {
+            "name": "edge-f1",
+            "params": {}
+          }
+        ],
+        "relation_inducer": {
+          "name": "union",
+          "params": {
+            "members": [
+              {
+                "name": "hearst"
+              },
+              {
+                "name": "compound"
+              }
+            ]
+          }
+        },
+        "resolver": {
+          "name": "exact-label",
+          "params": {}
+        },
+        "run": {
+          "on_error": "fail",
+          "seed": 0
+        },
+        "scorer": {
+          "name": "passthrough",
+          "params": {}
+        },
+        "segmenter": {
+          "name": "block",
+          "params": {}
+        }
+      },
+      "documents_processed": 355,
+      "errors": [],
+      "metrics": {
+        "edge-f1": {
+          "f1": 0.31693989071038253,
+          "gold_edges": 441.0,
+          "precision": 0.8055555555555556,
+          "predicted_edges": 108.0,
+          "recall": 0.19727891156462585
+        }
+      }
+    }
+  ],
+  "sweep": {
+    "axes": {
+      "relation_inducer": [
+        {
+          "name": "compound",
+          "params": {}
+        },
+        {
+          "name": "hearst",
+          "params": {}
+        },
+        {
+          "name": "union",
+          "params": {
+            "members": [
+              {
+                "name": "hearst"
+              },
+              {
+                "name": "compound"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "base": {
+      "concept_store": {
+        "name": "in-memory",
+        "params": {}
+      },
+      "dataset": {
+        "name": "taxonomy",
+        "params": {
+          "gold": "science-wordnet",
+          "root": "data/texeval"
+        }
+      },
+      "document_metrics": [],
+      "embedder": {
+        "name": "hashing",
+        "params": {}
+      },
+      "extractor": {
+        "name": "gazetteer",
+        "params": {
+          "gold": "science-wordnet",
+          "root": "data/texeval"
+        }
+      },
+      "graph_integrator": {
+        "name": "in-memory",
+        "params": {}
+      },
+      "metrics": [
+        {
+          "name": "edge-f1",
+          "params": {}
+        }
+      ],
+      "relation_inducer": {
+        "name": "compound",
+        "params": {}
+      },
+      "resolver": {
+        "name": "exact-label",
+        "params": {}
+      },
+      "run": {
+        "on_error": "fail",
+        "seed": 0
+      },
+      "scorer": {
+        "name": "passthrough",
+        "params": {}
+      },
+      "segmenter": {
+        "name": "block",
+        "params": {}
+      }
+    }
+  },
+  "table": [
+    {
+      "axis:relation_inducer": "compound",
+      "edge-f1.f1": 0.3119266055045872,
+      "edge-f1.gold_edges": 441.0,
+      "edge-f1.precision": 0.8173076923076923,
+      "edge-f1.predicted_edges": 104.0,
+      "edge-f1.recall": 0.1927437641723356,
+      "errors": 0
+    },
+    {
+      "axis:relation_inducer": "hearst",
+      "edge-f1.f1": 0.008988764044943821,
+      "edge-f1.gold_edges": 441.0,
+      "edge-f1.precision": 0.5,
+      "edge-f1.predicted_edges": 4.0,
+      "edge-f1.recall": 0.0045351473922902496,
+      "errors": 0
+    },
+    {
+      "axis:relation_inducer": "union",
+      "edge-f1.f1": 0.31693989071038253,
+      "edge-f1.gold_edges": 441.0,
+      "edge-f1.precision": 0.8055555555555556,
+      "edge-f1.predicted_edges": 108.0,
+      "edge-f1.recall": 0.19727891156462585,
+      "errors": 0
+    }
+  ]
+}

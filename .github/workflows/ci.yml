@@ -1,0 +1,35 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.12", "3.13"]
+    env:
+      UV_PYTHON: ${{ matrix.python-version }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+
+      - name: Install Python ${{ matrix.python-version }}
+        run: uv python install ${{ matrix.python-version }}
+
+      - name: Install dependencies
+        run: uv sync
+
+      - name: Lint
+        run: uv run ruff check .
+
+      # The `ml` marker gates tests that need sentence-transformers, spaCy
+      # models, and downloaded datasets -- none of which are installed here
+      # (the `ml` dependency/extra group is deliberately not synced in CI),
+      # so those tests are excluded on purpose, not silently skipped.
+      - name: Test
+        run: uv run pytest -q -m "not ml"

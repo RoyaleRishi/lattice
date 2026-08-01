@@ -1,0 +1,179 @@
+{
+  "config": {
+    "concept_store": {
+      "name": "in-memory",
+      "params": {}
+    },
+    "dataset": {
+      "name": "inspec",
+      "params": {
+        "split": "test"
+      }
+    },
+    "document_metrics": [
+      {
+        "name": "f1-at-k",
+        "params": {}
+      }
+    ],
+    "embedder": {
+      "name": "sentence-transformer",
+      "params": {}
+    },
+    "extractor": {
+      "name": "noun-chunk",
+      "params": {}
+    },
+    "graph_integrator": {
+      "name": "in-memory",
+      "params": {}
+    },
+    "metrics": [],
+    "relation_inducer": {
+      "name": "co-occurrence",
+      "params": {}
+    },
+    "resolver": {
+      "name": "exact-label",
+      "params": {}
+    },
+    "run": {
+      "on_error": "fail",
+      "seed": 0
+    },
+    "scorer": {
+      "name": "embedding-cosine",
+      "params": {
+        "top_k": 15
+      }
+    },
+    "segmenter": {
+      "name": "sentence",
+      "params": {}
+    }
+  },
+  "level": 0.95,
+  "metrics": {
+    "f1-at-k": {
+      "f1@10": {
+        "bca": {
+          "hi": 0.36952176326156705,
+          "lo": 0.3400528219788457,
+          "method": "bca"
+        },
+        "estimate": 0.3546870302156691,
+        "percentile": {
+          "hi": 0.3695470694543883,
+          "lo": 0.3400749693969679,
+          "method": "percentile"
+        }
+      },
+      "f1@15": {
+        "bca": {
+          "hi": 0.3694141537822098,
+          "lo": 0.34173172833911053,
+          "method": "bca"
+        },
+        "estimate": 0.35545236519207857,
+        "percentile": {
+          "hi": 0.36946237315527,
+          "lo": 0.341763687661195,
+          "method": "percentile"
+        }
+      },
+      "f1@5": {
+        "bca": {
+          "hi": 0.3134868483129681,
+          "lo": 0.2804411161092938,
+          "method": "bca"
+        },
+        "estimate": 0.29669509184546233,
+        "percentile": {
+          "hi": 0.31336883557002887,
+          "lo": 0.28025587366363974,
+          "method": "percentile"
+        }
+      },
+      "precision@10": {
+        "bca": {
+          "hi": 0.37089602295541907,
+          "lo": 0.33924830829203023,
+          "method": "bca"
+        },
+        "estimate": 0.3551277777777778,
+        "percentile": {
+          "hi": 0.3709517460317461,
+          "lo": 0.3392840476190476,
+          "method": "percentile"
+        }
+      },
+      "precision@15": {
+        "bca": {
+          "hi": 0.32047083939059545,
+          "lo": 0.29289481745131357,
+          "method": "bca"
+        },
+        "estimate": 0.3068222222222222,
+        "percentile": {
+          "hi": 0.32047317654567653,
+          "lo": 0.29292646631146624,
+          "method": "percentile"
+        }
+      },
+      "precision@5": {
+        "bca": {
+          "hi": 0.4351333333333333,
+          "lo": 0.3938333333333333,
+          "method": "bca"
+        },
+        "estimate": 0.4144333333333333,
+        "percentile": {
+          "hi": 0.4350675,
+          "lo": 0.39380000000000004,
+          "method": "percentile"
+        }
+      },
+      "recall@10": {
+        "bca": {
+          "hi": 0.42117175439434684,
+          "lo": 0.38111907394501193,
+          "method": "bca"
+        },
+        "estimate": 0.400433772118336,
+        "percentile": {
+          "hi": 0.4208879130333797,
+          "lo": 0.38086504071082034,
+          "method": "percentile"
+        }
+      },
+      "recall@15": {
+        "bca": {
+          "hi": 0.5009465947973853,
+          "lo": 0.4594386975489413,
+          "method": "bca"
+        },
+        "estimate": 0.4795924490125022,
+        "percentile": {
+          "hi": 0.5007466914322309,
+          "lo": 0.45920729463056065,
+          "method": "percentile"
+        }
+      },
+      "recall@5": {
+        "bca": {
+          "hi": 0.2720062067186948,
+          "lo": 0.2380301997643176,
+          "method": "bca"
+        },
+        "estimate": 0.25447762048292066,
+        "percentile": {
+          "hi": 0.27160535603195646,
+          "lo": 0.23774158282287827,
+          "method": "percentile"
+        }
+      }
+    }
+  },
+  "samples": 10000,
+  "seed": 0
+}

@@ -1,0 +1,550 @@
+{
+  "runs": [
+    {
+      "config": {
+        "concept_store": {
+          "name": "in-memory",
+          "params": {}
+        },
+        "dataset": {
+          "name": "mention-clusters",
+          "params": {
+            "root": "data/conel2",
+            "split": "test"
+          }
+        },
+        "document_metrics": [
+          {
+            "name": "coherence",
+            "params": {}
+          }
+        ],
+        "embedder": {
+          "name": "sentence-transformer",
+          "params": {}
+        },
+        "extractor": {
+          "name": "noun-chunk",
+          "params": {}
+        },
+        "graph_integrator": {
+          "name": "in-memory",
+          "params": {}
+        },
+        "metrics": [
+          {
+            "name": "redundancy",
+            "params": {}
+          },
+          {
+            "name": "hierarchy-sanity",
+            "params": {}
+          }
+        ],
+        "relation_inducer": {
+          "name": "union",
+          "params": {
+            "members": [
+              {
+                "name": "hearst"
+              },
+              {
+                "name": "compound"
+              }
+            ]
+          }
+        },
+        "resolver": {
+          "name": "exact-label",
+          "params": {}
+        },
+        "run": {
+          "on_error": "fail",
+          "seed": 0
+        },
+        "scorer": {
+          "name": "embedding-cosine",
+          "params": {}
+        },
+        "segmenter": {
+          "name": "block",
+          "params": {}
+        }
+      },
+      "documents_processed": 58,
+      "errors": [],
+      "metrics": {
+        "coherence": {
+          "coherence": 1.0,
+          "multi-surface-concepts": 0.0,
+          "singleton-fraction": 0.8267148014440433
+        },
+        "hierarchy-sanity": {
+          "cycle-components": 0.0,
+          "cycle-nodes": 0.0,
+          "is-a-edges": 98.0,
+          "max-depth": 2.0,
+          "self-loops": 0.0,
+          "transitive-shortcuts": 0.0
+        },
+        "redundancy": {
+          "concept-count": 554.0,
+          "duplicate-rate": 0.11732851985559567,
+          "near-duplicate-pairs": 37.0
+        }
+      }
+    },
+    {
+      "config": {
+        "concept_store": {
+          "name": "in-memory",
+          "params": {}
+        },
+        "dataset": {
+          "name": "mention-clusters",
+          "params": {
+            "root": "data/conel2",
+            "split": "test"
+          }
+        },
+        "document_metrics": [
+          {
+            "name": "coherence",
+            "params": {}
+          }
+        ],
+        "embedder": {
+          "name": "sentence-transformer",
+          "params": {}
+        },
+        "extractor": {
+          "name": "noun-chunk",
+          "params": {}
+        },
+        "graph_integrator": {
+          "name": "in-memory",
+          "params": {}
+        },
+        "metrics": [
+          {
+            "name": "redundancy",
+            "params": {}
+          },
+          {
+            "name": "hierarchy-sanity",
+            "params": {}
+          }
+        ],
+        "relation_inducer": {
+          "name": "union",
+          "params": {
+            "members": [
+              {
+                "name": "hearst"
+              },
+              {
+                "name": "compound"
+              }
+            ]
+          }
+        },
+        "resolver": {
+          "name": "embedding-nn",
+          "params": {
+            "threshold": 0.9
+          }
+        },
+        "run": {
+          "on_error": "fail",
+          "seed": 0
+        },
+        "scorer": {
+          "name": "embedding-cosine",
+          "params": {}
+        },
+        "segmenter": {
+          "name": "block",
+          "params": {}
+        }
+      },
+      "documents_processed": 58,
+      "errors": [],
+      "metrics": {
+        "coherence": {
+          "coherence": 0.9311108866167378,
+          "multi-surface-concepts": 27.0,
+          "singleton-fraction": 0.7954110898661568
+        },
+        "hierarchy-sanity": {
+          "cycle-components": 0.0,
+          "cycle-nodes": 0.0,
+          "is-a-edges": 88.0,
+          "max-depth": 2.0,
+          "self-loops": 0.0,
+          "transitive-shortcuts": 0.0
+        },
+        "redundancy": {
+          "concept-count": 523.0,
+          "duplicate-rate": 0.015296367112810707,
+          "near-duplicate-pairs": 4.0
+        }
+      }
+    },
+    {
+      "config": {
+        "concept_store": {
+          "name": "in-memory",
+          "params": {}
+        },
+        "dataset": {
+          "name": "mention-clusters",
+          "params": {
+            "root": "data/conel2",
+            "split": "test"
+          }
+        },
+        "document_metrics": [
+          {
+            "name": "coherence",
+            "params": {}
+          }
+        ],
+        "embedder": {
+          "name": "sentence-transformer",
+          "params": {}
+        },
+        "extractor": {
+          "name": "noun-chunk",
+          "params": {}
+        },
+        "graph_integrator": {
+          "name": "in-memory",
+          "params": {}
+        },
+        "metrics": [
+          {
+            "name": "redundancy",
+            "params": {}
+          },
+          {
+            "name": "hierarchy-sanity",
+            "params": {}
+          }
+        ],
+        "relation_inducer": {
+          "name": "union",
+          "params": {
+            "members": [
+              {
+                "name": "hearst"
+              },
+              {
+                "name": "compound"
+              }
+            ]
+          }
+        },
+        "resolver": {
+          "name": "embedding-nn",
+          "params": {
+            "threshold": 0.75
+          }
+        },
+        "run": {
+          "on_error": "fail",
+          "seed": 0
+        },
+        "scorer": {
+          "name": "embedding-cosine",
+          "params": {}
+        },
+        "segmenter": {
+          "name": "block",
+          "params": {}
+        }
+      },
+      "documents_processed": 58,
+      "errors": [],
+      "metrics": {
+        "coherence": {
+          "coherence": 0.8337958812631174,
+          "multi-surface-concepts": 100.0,
+          "singleton-fraction": 0.6698564593301436
+        },
+        "hierarchy-sanity": {
+          "cycle-components": 0.0,
+          "cycle-nodes": 0.0,
+          "is-a-edges": 37.0,
+          "max-depth": 1.0,
+          "self-loops": 0.0,
+          "transitive-shortcuts": 0.0
+        },
+        "redundancy": {
+          "concept-count": 418.0,
+          "duplicate-rate": 0.0,
+          "near-duplicate-pairs": 0.0
+        }
+      }
+    },
+    {
+      "config": {
+        "concept_store": {
+          "name": "in-memory",
+          "params": {}
+        },
+        "dataset": {
+          "name": "mention-clusters",
+          "params": {
+            "root": "data/conel2",
+            "split": "test"
+          }
+        },
+        "document_metrics": [
+          {
+            "name": "coherence",
+            "params": {}
+          }
+        ],
+        "embedder": {
+          "name": "sentence-transformer",
+          "params": {}
+        },
+        "extractor": {
+          "name": "noun-chunk",
+          "params": {}
+        },
+        "graph_integrator": {
+          "name": "in-memory",
+          "params": {}
+        },
+        "metrics": [
+          {
+            "name": "redundancy",
+            "params": {}
+          },
+          {
+            "name": "hierarchy-sanity",
+            "params": {}
+          }
+        ],
+        "relation_inducer": {
+          "name": "union",
+          "params": {
+            "members": [
+              {
+                "name": "hearst"
+              },
+              {
+                "name": "compound"
+              }
+            ]
+          }
+        },
+        "resolver": {
+          "name": "embedding-nn",
+          "params": {
+            "threshold": 0.65
+          }
+        },
+        "run": {
+          "on_error": "fail",
+          "seed": 0
+        },
+        "scorer": {
+          "name": "embedding-cosine",
+          "params": {}
+        },
+        "segmenter": {
+          "name": "block",
+          "params": {}
+        }
+      },
+      "documents_processed": 58,
+      "errors": [],
+      "metrics": {
+        "coherence": {
+          "coherence": 0.7666542585766861,
+          "multi-surface-concepts": 122.0,
+          "singleton-fraction": 0.5706051873198847
+        },
+        "hierarchy-sanity": {
+          "cycle-components": 0.0,
+          "cycle-nodes": 0.0,
+          "is-a-edges": 15.0,
+          "max-depth": 1.0,
+          "self-loops": 0.0,
+          "transitive-shortcuts": 0.0
+        },
+        "redundancy": {
+          "concept-count": 347.0,
+          "duplicate-rate": 0.0,
+          "near-duplicate-pairs": 0.0
+        }
+      }
+    }
+  ],
+  "sweep": {
+    "axes": {
+      "resolver": [
+        {
+          "name": "exact-label",
+          "params": {}
+        },
+        {
+          "name": "embedding-nn",
+          "params": {
+            "threshold": 0.9
+          }
+        },
+        {
+          "name": "embedding-nn",
+          "params": {
+            "threshold": 0.75
+          }
+        },
+        {
+          "name": "embedding-nn",
+          "params": {
+            "threshold": 0.65
+          }
+        }
+      ]
+    },
+    "base": {
+      "concept_store": {
+        "name": "in-memory",
+        "params": {}
+      },
+      "dataset": {
+        "name": "mention-clusters",
+        "params": {
+          "root": "data/conel2",
+          "split": "test"
+        }
+      },
+      "document_metrics": [
+        {
+          "name": "coherence",
+          "params": {}
+        }
+      ],
+      "embedder": {
+        "name": "sentence-transformer",
+        "params": {}
+      },
+      "extractor": {
+        "name": "noun-chunk",
+        "params": {}
+      },
+      "graph_integrator": {
+        "name": "in-memory",
+        "params": {}
+      },
+      "metrics": [
+        {
+          "name": "redundancy",
+          "params": {}
+        },
+        {
+          "name": "hierarchy-sanity",
+          "params": {}
+        }
+      ],
+      "relation_inducer": {
+        "name": "union",
+        "params": {
+          "members": [
+            {
+              "name": "hearst"
+            },
+            {
+              "name": "compound"
+            }
+          ]
+        }
+      },
+      "resolver": {
+        "name": "exact-label",
+        "params": {}
+      },
+      "run": {
+        "on_error": "fail",
+        "seed": 0
+      },
+      "scorer": {
+        "name": "embedding-cosine",
+        "params": {}
+      },
+      "segmenter": {
+        "name": "block",
+        "params": {}
+      }
+    }
+  },
+  "table": [
+    {
+      "axis:resolver": "exact-label",
+      "coherence.coherence": 1.0,
+      "coherence.multi-surface-concepts": 0.0,
+      "coherence.singleton-fraction": 0.8267148014440433,
+      "errors": 0,
+      "hierarchy-sanity.cycle-components": 0.0,
+      "hierarchy-sanity.cycle-nodes": 0.0,
+      "hierarchy-sanity.is-a-edges": 98.0,
+      "hierarchy-sanity.max-depth": 2.0,
+      "hierarchy-sanity.self-loops": 0.0,
+      "hierarchy-sanity.transitive-shortcuts": 0.0,
+      "redundancy.concept-count": 554.0,
+      "redundancy.duplicate-rate": 0.11732851985559567,
+      "redundancy.near-duplicate-pairs": 37.0
+    },
+    {
+      "axis:resolver": "embedding-nn",
+      "coherence.coherence": 0.9311108866167378,
+      "coherence.multi-surface-concepts": 27.0,
+      "coherence.singleton-fraction": 0.7954110898661568,
+      "errors": 0,
+      "hierarchy-sanity.cycle-components": 0.0,
+      "hierarchy-sanity.cycle-nodes": 0.0,
+      "hierarchy-sanity.is-a-edges": 88.0,
+      "hierarchy-sanity.max-depth": 2.0,
+      "hierarchy-sanity.self-loops": 0.0,
+      "hierarchy-sanity.transitive-shortcuts": 0.0,
+      "redundancy.concept-count": 523.0,
+      "redundancy.duplicate-rate": 0.015296367112810707,
+      "redundancy.near-duplicate-pairs": 4.0
+    },
+    {
+      "axis:resolver": "embedding-nn",
+      "coherence.coherence": 0.8337958812631174,
+      "coherence.multi-surface-concepts": 100.0,
+      "coherence.singleton-fraction": 0.6698564593301436,
+      "errors": 0,
+      "hierarchy-sanity.cycle-components": 0.0,
+      "hierarchy-sanity.cycle-nodes": 0.0,
+      "hierarchy-sanity.is-a-edges": 37.0,
+      "hierarchy-sanity.max-depth": 1.0,
+      "hierarchy-sanity.self-loops": 0.0,
+      "hierarchy-sanity.transitive-shortcuts": 0.0,
+      "redundancy.concept-count": 418.0,
+      "redundancy.duplicate-rate": 0.0,
+      "redundancy.near-duplicate-pairs": 0.0
+    },
+    {
+      "axis:resolver": "embedding-nn",
+      "coherence.coherence": 0.7666542585766861,
+      "coherence.multi-surface-concepts": 122.0,
+      "coherence.singleton-fraction": 0.5706051873198847,
+      "errors": 0,
+      "hierarchy-sanity.cycle-components": 0.0,
+      "hierarchy-sanity.cycle-nodes": 0.0,
+      "hierarchy-sanity.is-a-edges": 15.0,
+      "hierarchy-sanity.max-depth": 1.0,
+      "hierarchy-sanity.self-loops": 0.0,
+      "hierarchy-sanity.transitive-shortcuts": 0.0,
+      "redundancy.concept-count": 347.0,
+      "redundancy.duplicate-rate": 0.0,
+      "redundancy.near-duplicate-pairs": 0.0
+    }
+  ]
+}

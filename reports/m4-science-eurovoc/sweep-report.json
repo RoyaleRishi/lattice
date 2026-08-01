@@ -1,0 +1,328 @@
+{
+  "runs": [
+    {
+      "config": {
+        "concept_store": {
+          "name": "in-memory",
+          "params": {}
+        },
+        "dataset": {
+          "name": "taxonomy",
+          "params": {
+            "gold": "science-eurovoc",
+            "root": "data/texeval"
+          }
+        },
+        "document_metrics": [],
+        "embedder": {
+          "name": "hashing",
+          "params": {}
+        },
+        "extractor": {
+          "name": "gazetteer",
+          "params": {
+            "gold": "science-eurovoc",
+            "root": "data/texeval"
+          }
+        },
+        "graph_integrator": {
+          "name": "in-memory",
+          "params": {}
+        },
+        "metrics": [
+          {
+            "name": "edge-f1",
+            "params": {}
+          }
+        ],
+        "relation_inducer": {
+          "name": "compound",
+          "params": {}
+        },
+        "resolver": {
+          "name": "exact-label",
+          "params": {}
+        },
+        "run": {
+          "on_error": "fail",
+          "seed": 0
+        },
+        "scorer": {
+          "name": "passthrough",
+          "params": {}
+        },
+        "segmenter": {
+          "name": "block",
+          "params": {}
+        }
+      },
+      "documents_processed": 120,
+      "errors": [],
+      "metrics": {
+        "edge-f1": {
+          "f1": 0.2222222222222222,
+          "gold_edges": 124.0,
+          "precision": 0.5862068965517241,
+          "predicted_edges": 29.0,
+          "recall": 0.13709677419354838
+        }
+      }
+    },
+    {
+      "config": {
+        "concept_store": {
+          "name": "in-memory",
+          "params": {}
+        },
+        "dataset": {
+          "name": "taxonomy",
+          "params": {
+            "gold": "science-eurovoc",
+            "root": "data/texeval"
+          }
+        },
+        "document_metrics": [],
+        "embedder": {
+          "name": "hashing",
+          "params": {}
+        },
+        "extractor": {
+          "name": "gazetteer",
+          "params": {
+            "gold": "science-eurovoc",
+            "root": "data/texeval"
+          }
+        },
+        "graph_integrator": {
+          "name": "in-memory",
+          "params": {}
+        },
+        "metrics": [
+          {
+            "name": "edge-f1",
+            "params": {}
+          }
+        ],
+        "relation_inducer": {
+          "name": "hearst",
+          "params": {}
+        },
+        "resolver": {
+          "name": "exact-label",
+          "params": {}
+        },
+        "run": {
+          "on_error": "fail",
+          "seed": 0
+        },
+        "scorer": {
+          "name": "passthrough",
+          "params": {}
+        },
+        "segmenter": {
+          "name": "block",
+          "params": {}
+        }
+      },
+      "documents_processed": 120,
+      "errors": [],
+      "metrics": {
+        "edge-f1": {
+          "f1": 0.015748031496062992,
+          "gold_edges": 124.0,
+          "precision": 0.3333333333333333,
+          "predicted_edges": 3.0,
+          "recall": 0.008064516129032258
+        }
+      }
+    },
+    {
+      "config": {
+        "concept_store": {
+          "name": "in-memory",
+          "params": {}
+        },
+        "dataset": {
+          "name": "taxonomy",
+          "params": {
+            "gold": "science-eurovoc",
+            "root": "data/texeval"
+          }
+        },
+        "document_metrics": [],
+        "embedder": {
+          "name": "hashing",
+          "params": {}
+        },
+        "extractor": {
+          "name": "gazetteer",
+          "params": {
+            "gold": "science-eurovoc",
+            "root": "data/texeval"
+          }
+        },
+        "graph_integrator": {
+          "name": "in-memory",
+          "params": {}
+        },
+        "metrics": [
+          {
+            "name": "edge-f1",
+            "params": {}
+          }
+        ],
+        "relation_inducer": {
+          "name": "union",
+          "params": {
+            "members": [
+              {
+                "name": "hearst"
+              },
+              {
+                "name": "compound"
+              }
+            ]
+          }
+        },
+        "resolver": {
+          "name": "exact-label",
+          "params": {}
+        },
+        "run": {
+          "on_error": "fail",
+          "seed": 0
+        },
+        "scorer": {
+          "name": "passthrough",
+          "params": {}
+        },
+        "segmenter": {
+          "name": "block",
+          "params": {}
+        }
+      },
+      "documents_processed": 120,
+      "errors": [],
+      "metrics": {
+        "edge-f1": {
+          "f1": 0.2337662337662338,
+          "gold_edges": 124.0,
+          "precision": 0.6,
+          "predicted_edges": 30.0,
+          "recall": 0.14516129032258066
+        }
+      }
+    }
+  ],
+  "sweep": {
+    "axes": {
+      "relation_inducer": [
+        {
+          "name": "compound",
+          "params": {}
+        },
+        {
+          "name": "hearst",
+          "params": {}
+        },
+        {
+          "name": "union",
+          "params": {
+            "members": [
+              {
+                "name": "hearst"
+              },
+              {
+                "name": "compound"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "base": {
+      "concept_store": {
+        "name": "in-memory",
+        "params": {}
+      },
+      "dataset": {
+        "name": "taxonomy",
+        "params": {
+          "gold": "science-eurovoc",
+          "root": "data/texeval"
+        }
+      },
+      "document_metrics": [],
+      "embedder": {
+        "name": "hashing",
+        "params": {}
+      },
+      "extractor": {
+        "name": "gazetteer",
+        "params": {
+          "gold": "science-eurovoc",
+          "root": "data/texeval"
+        }
+      },
+      "graph_integrator": {
+        "name": "in-memory",
+        "params": {}
+      },
+      "metrics": [
+        {
+          "name": "edge-f1",
+          "params": {}
+        }
+      ],
+      "relation_inducer": {
+        "name": "compound",
+        "params": {}
+      },
+      "resolver": {
+        "name": "exact-label",
+        "params": {}
+      },
+      "run": {
+        "on_error": "fail",
+        "seed": 0
+      },
+      "scorer": {
+        "name": "passthrough",
+        "params": {}
+      },
+      "segmenter": {
+        "name": "block",
+        "params": {}
+      }
+    }
+  },
+  "table": [
+    {
+      "axis:relation_inducer": "compound",
+      "edge-f1.f1": 0.2222222222222222,
+      "edge-f1.gold_edges": 124.0,
+      "edge-f1.precision": 0.5862068965517241,
+      "edge-f1.predicted_edges": 29.0,
+      "edge-f1.recall": 0.13709677419354838,
+      "errors": 0
+    },
+    {
+      "axis:relation_inducer": "hearst",
+      "edge-f1.f1": 0.015748031496062992,
+      "edge-f1.gold_edges": 124.0,
+      "edge-f1.precision": 0.3333333333333333,
+      "edge-f1.predicted_edges": 3.0,
+      "edge-f1.recall": 0.008064516129032258,
+      "errors": 0
+    },
+    {
+      "axis:relation_inducer": "union",
+      "edge-f1.f1": 0.2337662337662338,
+      "edge-f1.gold_edges": 124.0,
+      "edge-f1.precision": 0.6,
+      "edge-f1.predicted_edges": 30.0,
+      "edge-f1.recall": 0.14516129032258066,
+      "errors": 0
+    }
+  ]
+}

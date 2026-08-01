@@ -1,0 +1,138 @@
+{
+  "config": {
+    "concept_store": {
+      "name": "in-memory",
+      "params": {}
+    },
+    "dataset": {
+      "name": "taxonomy",
+      "params": {
+        "gold": "science",
+        "root": "data/texeval"
+      }
+    },
+    "document_metrics": [],
+    "embedder": {
+      "name": "hashing",
+      "params": {}
+    },
+    "extractor": {
+      "name": "gazetteer",
+      "params": {
+        "gold": "science",
+        "root": "data/texeval"
+      }
+    },
+    "graph_integrator": {
+      "name": "in-memory",
+      "params": {}
+    },
+    "metrics": [
+      {
+        "name": "edge-f1",
+        "params": {}
+      }
+    ],
+    "relation_inducer": {
+      "name": "union",
+      "params": {
+        "members": [
+          {
+            "name": "hearst"
+          },
+          {
+            "name": "compound"
+          }
+        ]
+      }
+    },
+    "resolver": {
+      "name": "exact-label",
+      "params": {}
+    },
+    "run": {
+      "on_error": "fail",
+      "seed": 0
+    },
+    "scorer": {
+      "name": "passthrough",
+      "params": {}
+    },
+    "segmenter": {
+      "name": "block",
+      "params": {}
+    }
+  },
+  "level": 0.95,
+  "metrics": {
+    "edge-f1": {
+      "f1": {
+        "bca": {
+          "hi": 0.37480314960629924,
+          "lo": 0.3673469387755102,
+          "method": "bca"
+        },
+        "estimate": 0.37245696400625977,
+        "percentile": {
+          "hi": 0.37421383647798745,
+          "lo": 0.3647798742138364,
+          "method": "percentile"
+        }
+      },
+      "gold_edges": {
+        "bca": {
+          "hi": 465.0,
+          "lo": 465.0,
+          "method": "degenerate"
+        },
+        "estimate": 465.0,
+        "percentile": {
+          "hi": 465.0,
+          "lo": 465.0,
+          "method": "percentile"
+        }
+      },
+      "precision": {
+        "bca": {
+          "hi": 0.6882352941176471,
+          "lo": 0.6764705882352942,
+          "method": "bca"
+        },
+        "estimate": 0.6839080459770115,
+        "percentile": {
+          "hi": 0.6982248520710059,
+          "lo": 0.6783625730994152,
+          "method": "percentile"
+        }
+      },
+      "predicted_edges": {
+        "bca": {
+          "hi": 174.0,
+          "lo": 173.0,
+          "method": "bca"
+        },
+        "estimate": 174.0,
+        "percentile": {
+          "hi": 174.0,
+          "lo": 168.0,
+          "method": "percentile"
+        }
+      },
+      "recall": {
+        "bca": {
+          "hi": 0.25591397849462366,
+          "lo": 0.25161290322580643,
+          "method": "bca"
+        },
+        "estimate": 0.25591397849462366,
+        "percentile": {
+          "hi": 0.25591397849462366,
+          "lo": 0.24946236559139784,
+          "method": "percentile"
+        }
+      }
+    }
+  },
+  "samples": 10000,
+  "seed": 0
+}

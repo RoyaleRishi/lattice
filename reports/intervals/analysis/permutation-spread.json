@@ -1,0 +1,374 @@
+[
+  {
+    "fixed_prefix": 0,
+    "keys": {
+      "clustering.ari": {
+        "max": 0.8035961223220544,
+        "min": 0.8035961223220544,
+        "range": 0.0,
+        "std": 0.0
+      },
+      "clustering.b3-f1": {
+        "max": 0.9491453610194668,
+        "min": 0.9491453610194664,
+        "range": 3.3306690738754696e-16,
+        "std": 9.138288810747368e-17
+      },
+      "clustering.b3-precision": {
+        "max": 0.9977876106194691,
+        "min": 0.9977876106194691,
+        "range": 0.0,
+        "std": 0.0
+      },
+      "clustering.b3-recall": {
+        "max": 0.9050252844500635,
+        "min": 0.9050252844500627,
+        "range": 7.771561172376096e-16,
+        "std": 1.7368870616387718e-16
+      }
+    },
+    "label": "m3-conel2-nn090",
+    "permutations": 40,
+    "seed": 1
+  },
+  {
+    "fixed_prefix": 0,
+    "keys": {
+      "clustering.ari": {
+        "max": 0.383533328451432,
+        "min": 0.3769358996068795,
+        "range": 0.0065974288445525,
+        "std": 0.001950550324602676
+      },
+      "clustering.b3-f1": {
+        "max": 0.6293316571328061,
+        "min": 0.6256398055530417,
+        "range": 0.0036918515797644824,
+        "std": 0.0009385637392127679
+      },
+      "clustering.b3-precision": {
+        "max": 0.7877043572028958,
+        "min": 0.7840222716804999,
+        "range": 0.003682085522395906,
+        "std": 0.0009340119957724608
+      },
+      "clustering.b3-recall": {
+        "max": 0.5251478486859112,
+        "min": 0.5196111538192141,
+        "range": 0.005536694866697167,
+        "std": 0.0012676569459158708
+      }
+    },
+    "label": "m3-ecbplus-nn090",
+    "permutations": 40,
+    "seed": 1
+  },
+  {
+    "fixed_prefix": 1,
+    "keys": {
+      "edge-f1.f1": {
+        "max": 0.2991202346041056,
+        "min": 0.2991202346041056,
+        "range": 0.0,
+        "std": 0.0
+      },
+      "edge-f1.gold_edges": {
+        "max": 261.0,
+        "min": 261.0,
+        "range": 0.0,
+        "std": 0.0
+      },
+      "edge-f1.precision": {
+        "max": 0.6375,
+        "min": 0.6375,
+        "range": 0.0,
+        "std": 0.0
+      },
+      "edge-f1.predicted_edges": {
+        "max": 80.0,
+        "min": 80.0,
+        "range": 0.0,
+        "std": 0.0
+      },
+      "edge-f1.recall": {
+        "max": 0.19540229885057472,
+        "min": 0.19540229885057472,
+        "range": 0.0,
+        "std": 0.0
+      }
+    },
+    "label": "m4-env-eurovoc-union",
+    "permutations": 40,
+    "seed": 1
+  },
+  {
+    "fixed_prefix": 1,
+    "keys": {
+      "edge-f1.f1": {
+        "max": 0.323269856014863,
+        "min": 0.323269856014863,
+        "range": 0.0,
+        "std": 0.0
+      },
+      "edge-f1.gold_edges": {
+        "max": 1587.0,
+        "min": 1587.0,
+        "range": 0.0,
+        "std": 0.0
+      },
+      "edge-f1.precision": {
+        "max": 0.6148409893992933,
+        "min": 0.6148409893992933,
+        "range": 0.0,
+        "std": 0.0
+      },
+      "edge-f1.predicted_edges": {
+        "max": 566.0,
+        "min": 566.0,
+        "range": 0.0,
+        "std": 0.0
+      },
+      "edge-f1.recall": {
+        "max": 0.21928166351606806,
+        "min": 0.21928166351606806,
+        "range": 0.0,
+        "std": 0.0
+      }
+    },
+    "label": "m4-food-union",
+    "permutations": 40,
+    "seed": 1
+  },
+  {
+    "fixed_prefix": 1,
+    "keys": {
+      "edge-f1.f1": {
+        "max": 0.3881401617250674,
+        "min": 0.3881401617250674,
+        "range": 0.0,
+        "std": 0.0
+      },
+      "edge-f1.gold_edges": {
+        "max": 1533.0,
+        "min": 1533.0,
+        "range": 0.0,
+        "std": 0.0
+      },
+      "edge-f1.precision": {
+        "max": 0.6233766233766234,
+        "min": 0.6233766233766234,
+        "range": 0.0,
+        "std": 0.0
+      },
+      "edge-f1.predicted_edges": {
+        "max": 693.0,
+        "min": 693.0,
+        "range": 0.0,
+        "std": 0.0
+      },
+      "edge-f1.recall": {
+        "max": 0.28180039138943247,
+        "min": 0.28180039138943247,
+        "range": 0.0,
+        "std": 0.0
+      }
+    },
+    "label": "m4-food-wordnet-union",
+    "permutations": 40,
+    "seed": 1
+  },
+  {
+    "fixed_prefix": 1,
+    "keys": {
+      "edge-f1.f1": {
+        "max": 0.37245696400625977,
+        "min": 0.37245696400625977,
+        "range": 0.0,
+        "std": 0.0
+      },
+      "edge-f1.gold_edges": {
+        "max": 465.0,
+        "min": 465.0,
+        "range": 0.0,
+        "std": 0.0
+      },
+      "edge-f1.precision": {
+        "max": 0.6839080459770115,
+        "min": 0.6839080459770115,
+        "range": 0.0,
+        "std": 0.0
+      },
+      "edge-f1.predicted_edges": {
+        "max": 174.0,
+        "min": 174.0,
+        "range": 0.0,
+        "std": 0.0
+      },
+      "edge-f1.recall": {
+        "max": 0.25591397849462366,
+        "min": 0.25591397849462366,
+        "range": 0.0,
+        "std": 0.0
+      }
+    },
+    "label": "m4-science-union",
+    "permutations": 40,
+    "seed": 1
+  },
+  {
+    "fixed_prefix": 1,
+    "keys": {
+      "edge-f1.f1": {
+        "max": 0.2337662337662338,
+        "min": 0.2337662337662338,
+        "range": 0.0,
+        "std": 0.0
+      },
+      "edge-f1.gold_edges": {
+        "max": 124.0,
+        "min": 124.0,
+        "range": 0.0,
+        "std": 0.0
+      },
+      "edge-f1.precision": {
+        "max": 0.6,
+        "min": 0.6,
+        "range": 0.0,
+        "std": 0.0
+      },
+      "edge-f1.predicted_edges": {
+        "max": 30.0,
+        "min": 30.0,
+        "range": 0.0,
+        "std": 0.0
+      },
+      "edge-f1.recall": {
+        "max": 0.14516129032258066,
+        "min": 0.14516129032258066,
+        "range": 0.0,
+        "std": 0.0
+      }
+    },
+    "label": "m4-science-eurovoc-union",
+    "permutations": 40,
+    "seed": 1
+  },
+  {
+    "fixed_prefix": 1,
+    "keys": {
+      "edge-f1.f1": {
+        "max": 0.31693989071038253,
+        "min": 0.31693989071038253,
+        "range": 0.0,
+        "std": 0.0
+      },
+      "edge-f1.gold_edges": {
+        "max": 441.0,
+        "min": 441.0,
+        "range": 0.0,
+        "std": 0.0
+      },
+      "edge-f1.precision": {
+        "max": 0.8055555555555556,
+        "min": 0.8055555555555556,
+        "range": 0.0,
+        "std": 0.0
+      },
+      "edge-f1.predicted_edges": {
+        "max": 108.0,
+        "min": 108.0,
+        "range": 0.0,
+        "std": 0.0
+      },
+      "edge-f1.recall": {
+        "max": 0.19727891156462585,
+        "min": 0.19727891156462585,
+        "range": 0.0,
+        "std": 0.0
+      }
+    },
+    "label": "m4-science-wordnet-union",
+    "permutations": 40,
+    "seed": 1
+  },
+  {
+    "fixed_prefix": 0,
+    "keys": {
+      "coherence.coherence": {
+        "max": 0.9336848454167936,
+        "min": 0.9311108866167378,
+        "range": 0.002573958800055842,
+        "std": 0.0007608415147700373
+      },
+      "coherence.multi-surface-concepts": {
+        "max": 27.0,
+        "min": 27.0,
+        "range": 0.0,
+        "std": 0.0
+      },
+      "coherence.singleton-fraction": {
+        "max": 0.7961904761904762,
+        "min": 0.7954110898661568,
+        "range": 0.0007793863243193977,
+        "std": 0.00022968000011933142
+      },
+      "hierarchy-sanity.cycle-components": {
+        "max": 0.0,
+        "min": 0.0,
+        "range": 0.0,
+        "std": 0.0
+      },
+      "hierarchy-sanity.cycle-nodes": {
+        "max": 0.0,
+        "min": 0.0,
+        "range": 0.0,
+        "std": 0.0
+      },
+      "hierarchy-sanity.is-a-edges": {
+        "max": 91.0,
+        "min": 84.0,
+        "range": 7.0,
+        "std": 1.5256146302392357
+      },
+      "hierarchy-sanity.max-depth": {
+        "max": 3.0,
+        "min": 2.0,
+        "range": 1.0,
+        "std": 0.4330127018922193
+      },
+      "hierarchy-sanity.self-loops": {
+        "max": 0.0,
+        "min": 0.0,
+        "range": 0.0,
+        "std": 0.0
+      },
+      "hierarchy-sanity.transitive-shortcuts": {
+        "max": 0.0,
+        "min": 0.0,
+        "range": 0.0,
+        "std": 0.0
+      },
+      "redundancy.concept-count": {
+        "max": 525.0,
+        "min": 523.0,
+        "range": 2.0,
+        "std": 0.5894913061275798
+      },
+      "redundancy.duplicate-rate": {
+        "max": 0.015296367112810707,
+        "min": 0.015238095238095238,
+        "range": 5.8271874715468824e-05,
+        "std": 1.7172336457519744e-05
+      },
+      "redundancy.near-duplicate-pairs": {
+        "max": 4.0,
+        "min": 4.0,
+        "range": 0.0,
+        "std": 0.0
+      }
+    },
+    "label": "m5-conel2-nn090",
+    "permutations": 40,
+    "seed": 1
+  }
+]

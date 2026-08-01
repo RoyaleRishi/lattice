@@ -1,0 +1,138 @@
+{
+  "config": {
+    "concept_store": {
+      "name": "in-memory",
+      "params": {}
+    },
+    "dataset": {
+      "name": "taxonomy",
+      "params": {
+        "gold": "food-wordnet",
+        "root": "data/texeval"
+      }
+    },
+    "document_metrics": [],
+    "embedder": {
+      "name": "hashing",
+      "params": {}
+    },
+    "extractor": {
+      "name": "gazetteer",
+      "params": {
+        "gold": "food-wordnet",
+        "root": "data/texeval"
+      }
+    },
+    "graph_integrator": {
+      "name": "in-memory",
+      "params": {}
+    },
+    "metrics": [
+      {
+        "name": "edge-f1",
+        "params": {}
+      }
+    ],
+    "relation_inducer": {
+      "name": "union",
+      "params": {
+        "members": [
+          {
+            "name": "hearst"
+          },
+          {
+            "name": "compound"
+          }
+        ]
+      }
+    },
+    "resolver": {
+      "name": "exact-label",
+      "params": {}
+    },
+    "run": {
+      "on_error": "fail",
+      "seed": 0
+    },
+    "scorer": {
+      "name": "passthrough",
+      "params": {}
+    },
+    "segmenter": {
+      "name": "block",
+      "params": {}
+    }
+  },
+  "level": 0.95,
+  "metrics": {
+    "edge-f1": {
+      "f1": {
+        "bca": {
+          "hi": 0.38073394495412843,
+          "lo": 0.3681546249424758,
+          "method": "percentile-fallback"
+        },
+        "estimate": 0.3881401617250674,
+        "percentile": {
+          "hi": 0.38073394495412843,
+          "lo": 0.3681546249424758,
+          "method": "percentile"
+        }
+      },
+      "gold_edges": {
+        "bca": {
+          "hi": 1533.0,
+          "lo": 1533.0,
+          "method": "degenerate"
+        },
+        "estimate": 1533.0,
+        "percentile": {
+          "hi": 1533.0,
+          "lo": 1533.0,
+          "method": "percentile"
+        }
+      },
+      "precision": {
+        "bca": {
+          "hi": 0.644904458598726,
+          "lo": 0.6257763975155279,
+          "method": "percentile-fallback"
+        },
+        "estimate": 0.6233766233766234,
+        "percentile": {
+          "hi": 0.644904458598726,
+          "lo": 0.6257763975155279,
+          "method": "percentile"
+        }
+      },
+      "predicted_edges": {
+        "bca": {
+          "hi": 652.0,
+          "lo": 629.0,
+          "method": "percentile-fallback"
+        },
+        "estimate": 693.0,
+        "percentile": {
+          "hi": 652.0,
+          "lo": 629.0,
+          "method": "percentile"
+        }
+      },
+      "recall": {
+        "bca": {
+          "hi": 0.27071102413568165,
+          "lo": 0.2602739726027397,
+          "method": "percentile-fallback"
+        },
+        "estimate": 0.28180039138943247,
+        "percentile": {
+          "hi": 0.27071102413568165,
+          "lo": 0.2602739726027397,
+          "method": "percentile"
+        }
+      }
+    }
+  },
+  "samples": 10000,
+  "seed": 0
+}

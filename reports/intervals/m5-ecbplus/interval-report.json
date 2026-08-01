@@ -1,0 +1,181 @@
+{
+  "config": {
+    "concept_store": {
+      "name": "in-memory",
+      "params": {}
+    },
+    "dataset": {
+      "name": "mention-clusters",
+      "params": {
+        "root": "data/ecbplus",
+        "split": "test"
+      }
+    },
+    "document_metrics": [
+      {
+        "name": "coherence",
+        "params": {}
+      }
+    ],
+    "embedder": {
+      "name": "sentence-transformer",
+      "params": {}
+    },
+    "extractor": {
+      "name": "noun-chunk",
+      "params": {}
+    },
+    "graph_integrator": {
+      "name": "in-memory",
+      "params": {}
+    },
+    "metrics": [
+      {
+        "name": "redundancy",
+        "params": {}
+      },
+      {
+        "name": "hierarchy-sanity",
+        "params": {}
+      }
+    ],
+    "relation_inducer": {
+      "name": "union",
+      "params": {
+        "members": [
+          {
+            "name": "hearst"
+          },
+          {
+            "name": "compound"
+          }
+        ]
+      }
+    },
+    "resolver": {
+      "name": "embedding-nn",
+      "params": {
+        "threshold": 0.9
+      }
+    },
+    "run": {
+      "on_error": "fail",
+      "seed": 0
+    },
+    "scorer": {
+      "name": "embedding-cosine",
+      "params": {}
+    },
+    "segmenter": {
+      "name": "block",
+      "params": {}
+    }
+  },
+  "level": 0.95,
+  "metrics": {
+    "coherence": {
+      "coherence": {
+        "estimate": 0.9423817743407504,
+        "percentile": {
+          "hi": 0.9486537144305967,
+          "lo": 0.9376427848015836,
+          "method": "percentile"
+        }
+      },
+      "multi-surface-concepts": {
+        "estimate": 58.0,
+        "percentile": {
+          "hi": 43.775,
+          "lo": 28.0,
+          "method": "percentile"
+        }
+      },
+      "singleton-fraction": {
+        "estimate": 0.6990740740740741,
+        "percentile": {
+          "hi": 0.5116829118325957,
+          "lo": 0.36280469109305535,
+          "method": "percentile"
+        }
+      }
+    },
+    "hierarchy-sanity": {
+      "cycle-components": {
+        "estimate": 0.0,
+        "percentile": {
+          "hi": 0.0,
+          "lo": 0.0,
+          "method": "percentile"
+        }
+      },
+      "cycle-nodes": {
+        "estimate": 0.0,
+        "percentile": {
+          "hi": 0.0,
+          "lo": 0.0,
+          "method": "percentile"
+        }
+      },
+      "is-a-edges": {
+        "estimate": 53.0,
+        "percentile": {
+          "hi": 45.55,
+          "lo": 28.0,
+          "method": "percentile"
+        }
+      },
+      "max-depth": {
+        "estimate": 2.0,
+        "percentile": {
+          "hi": 2.0,
+          "lo": 1.0,
+          "method": "percentile"
+        }
+      },
+      "self-loops": {
+        "estimate": 0.0,
+        "percentile": {
+          "hi": 0.0,
+          "lo": 0.0,
+          "method": "percentile"
+        }
+      },
+      "transitive-shortcuts": {
+        "estimate": 1.0,
+        "percentile": {
+          "hi": 1.0,
+          "lo": 0.0,
+          "method": "percentile"
+        }
+      }
+    },
+    "redundancy": {
+      "concept-count": {
+        "estimate": 864.0,
+        "percentile": {
+          "hi": 655.325,
+          "lo": 580.225,
+          "method": "percentile"
+        }
+      },
+      "duplicate-rate": {
+        "estimate": 0.011574074074074073,
+        "percentile": {
+          "hi": 0.016278373587530003,
+          "lo": 0.0033798995979214186,
+          "method": "percentile"
+        }
+      },
+      "near-duplicate-pairs": {
+        "estimate": 5.0,
+        "percentile": {
+          "hi": 5.0,
+          "lo": 1.0,
+          "method": "percentile"
+        }
+      }
+    }
+  },
+  "samples": 50,
+  "seed": 0
+}
