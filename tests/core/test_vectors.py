@@ -1,5 +1,7 @@
 import math
 
+import pytest
+
 from lattice.core.vectors import cosine
 
 
@@ -13,3 +15,8 @@ def test_cosine_orthogonal_vectors():
 
 def test_cosine_zero_vector_is_zero():
     assert cosine((0.0, 0.0), (1.0, 0.0)) == 0.0
+
+
+def test_cosine_mismatched_dimensions_raises():
+    with pytest.raises(ValueError):
+        cosine((1.0, 2.0), (1.0, 2.0, 3.0))

@@ -88,3 +88,16 @@ def test_corrupt_file_raises_json_error(tmp_path):
     path.write_text("{not json")
     with pytest.raises(json.JSONDecodeError):
         Engine.load(path)
+
+
+def test_load_rejects_concept_with_wrong_embedding_dimension(tmp_path):
+    engine = Engine()
+    engine.ingest(TEXT_A)
+    path = tmp_path / "memory.json"
+    engine.save(path)
+    payload = json.loads(path.read_text())
+    bad_concept = payload["concepts"][0]
+    bad_concept["embedding"] = bad_concept["embedding"][:-1]
+    path.write_text(json.dumps(payload))
+    with pytest.raises(ValueError, match=bad_concept["id"]):
+        Engine.load(path)

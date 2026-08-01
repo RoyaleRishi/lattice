@@ -195,6 +195,15 @@ class Engine:
             )
             for c in payload["concepts"]
         )
+        embedder = getattr(engine._orchestrator.resolver, "embedder", None)
+        if embedder is not None:
+            for concept in concepts:
+                found = len(concept.embedding)
+                if found != embedder.dim:
+                    raise ValueError(
+                        f"concept {concept.id!r} has embedding of length "
+                        f"{found}, expected {embedder.dim}"
+                    )
         relations = tuple(
             Relation(
                 type=r["type"],
