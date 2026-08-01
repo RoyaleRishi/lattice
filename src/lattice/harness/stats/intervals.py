@@ -1,9 +1,10 @@
 """Confidence intervals over resampling draws. Percentile and BCa
 (bias-corrected and accelerated) for n-out-of-n bootstrap draws; a rescaled
 construction for m-out-of-n subsampling draws; paired delta for comparative
-claims. BCa is only valid for the "resample" scheme — it assumes the draws are
-a bootstrap distribution at the full sample size. Stdlib only —
-statistics.NormalDist supplies the normal CDF and its inverse."""
+claims, which takes either scheme. BCa is only valid for the "resample" scheme
+— it assumes the draws are a bootstrap distribution at the full sample size,
+so it is offered neither by subsample_interval nor by paired_delta. Stdlib
+only — statistics.NormalDist supplies the normal CDF and its inverse."""
 
 import math
 from dataclasses import dataclass
@@ -163,13 +164,74 @@ def bca_interval(
 def paired_delta(
     resamples_a: list[float], resamples_b: list[float],
     estimate_a: float, estimate_b: float, level: float = 0.95,
+    *, m: int | None = None, n: int | None = None,
 ) -> DeltaResult:
+    """Interval on the difference of two statistics, paired iteration by
+    iteration. Returns the observed delta, its interval, and the fraction of
+    replicate deltas above zero.
+
+    PAIRING INVARIANT — load-bearing, and not checkable from in here. Element i
+    of `resamples_a` and element i of `resamples_b` must come from the *same*
+    replicate document set; that is the whole reason a paired delta is tighter
+    than the difference of two marginal intervals. The library gets it by
+    construction rather than by assertion: resample.bootstrap() builds a fresh
+    random.Random(seed) per call and walks an insertion-ordered pool, so two
+    calls at the same seed, over two bundles whose `per_document` holds the
+    same document ids in the same order, consume the identical RNG sequence and
+    therefore draw the identical indices at every iteration — under "resample"
+    and "subsample" alike. Callers must pass both bundles the same seed and
+    must not reorder either bundle's `per_document` between the two calls. The
+    only thing this function can check is that the two lists are the same
+    length; equal length with misaligned draws silently yields a wrong
+    (typically too wide) interval, so callers over two separately-built bundles
+    should compare the two document-id lists themselves.
+
+    SCHEME. With `m` and `n` omitted the draws are read as an n-out-of-n
+    bootstrap and the interval is the plain percentile interval over the paired
+    differences — the classical path, unchanged. Pass `m` and `n` (straight off
+    the BootstrapDraws) when the draws came from m-out-of-n subsampling, which
+    is mandatory for pooled metrics (see resample.py): the delta distribution
+    is then rescaled by tau = sqrt(m / n) about the *observed* delta, exactly as
+    subsample_interval() rescales a single statistic about its own estimate.
+    Reading size-m deltas as if they were full-size bootstrap deltas overstates
+    the spread by sqrt(n / m). Passing one of `m`/`n` without the other is an
+    error rather than a silent fallback to the wrong scheme.
+
+    `prob_positive` is computed from the same distribution the interval is: the
+    raw paired differences on the classical path, the tau-rescaled ones under
+    subsampling. Otherwise a subsample interval could exclude zero while
+    `prob_positive` reported appreciable mass on the other side of it.
+
+    BCa is deliberately not offered here under either scheme.
+
+    A paired delta of two *size-dependent* functionals can be better behaved
+    than either marginal: both arms are scored on the same m documents, so a
+    size effect common to the two arms cancels in the difference (B3 on M3 is
+    the live example — theta(29) > theta(58) for both resolvers). That is a
+    property of the particular pair, not a licence: it holds only to the extent
+    the two arms share the size effect, which is an empirical question per
+    comparison and not something this function can guarantee.
+    """
     if len(resamples_a) != len(resamples_b):
         raise ValueError(
             "paired_delta requires equal-length resample lists "
             f"(got {len(resamples_a)} and {len(resamples_b)})"
         )
+    if (m is None) != (n is None):
+        raise ValueError(
+            "paired_delta requires both m and n for the subsample scheme, or neither "
+            f"for the n-out-of-n bootstrap (got m={m}, n={n})"
+        )
+    observed = estimate_a - estimate_b
     deltas = [x - y for x, y in zip(resamples_a, resamples_b)]
-    iv = percentile_interval(estimate_a - estimate_b, deltas, level)
-    prob = sum(1 for d in deltas if d > 0) / len(deltas)
-    return DeltaResult(estimate_a - estimate_b, iv.lo, iv.hi, prob)
+    if m is None or n is None:
+        iv = percentile_interval(observed, deltas, level)
+        scaled = deltas
+    else:
+        iv = subsample_interval(observed, deltas, m=m, n=n, level=level)
+        # n == 0 is the "everything was held fixed" case subsample_interval
+        # reports as degenerate; there is no variability to rescale.
+        tau = math.sqrt(m / n) if n else 0.0
+        scaled = [observed + tau * (d - observed) for d in deltas]
+    prob = sum(1 for d in scaled if d > 0) / len(scaled)
+    return DeltaResult(observed, iv.lo, iv.hi, prob)

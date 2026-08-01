@@ -120,3 +120,90 @@ def test_paired_delta_rejects_unequal_length():
     # iterations; the guard must reject instead of computing a bogus delta.
     with pytest.raises(ValueError, match="equal-length"):
         paired_delta([1.0, 2.0, 3.0], [2.0, 3.0], 2.0, 3.0)
+
+
+def test_paired_delta_equal_length_guard_still_holds_under_the_subsample_scheme():
+    # The guard must fire before any rescaling — a length mismatch is a pairing
+    # bug regardless of scheme.
+    with pytest.raises(ValueError, match="equal-length"):
+        paired_delta([1.0, 2.0, 3.0], [2.0, 3.0], 2.0, 3.0, m=2, n=8)
+
+
+def test_paired_delta_subsample_rescaling_matches_a_hand_computed_example():
+    # Hand-computed, deliberately the same arithmetic as
+    # test_subsample_interval_brackets_estimate_when_draws_straddle_it so the
+    # two constructions can be read side by side.
+    #   deltas  = a - b = [0, 1, 2, 3, 4]
+    #   observed = estimate_a - estimate_b = 2.0 - 0.0 = 2.0
+    #   m = 2, n = 8, level = 0.5 so alpha/2 = 0.25
+    #   q(0.25): pos = 0.25 * (5 - 1) = 1.0  -> 1.0
+    #   q(0.75): pos = 0.75 * (5 - 1) = 3.0  -> 3.0
+    #   tau = sqrt(2 / 8) = 0.5
+    #   lo  = 2.0 + 0.5 * (1.0 - 2.0) = 1.5
+    #   hi  = 2.0 + 0.5 * (3.0 - 2.0) = 2.5
+    a = [0.0, 1.0, 2.0, 3.0, 4.0]
+    b = [0.0, 0.0, 0.0, 0.0, 0.0]
+    d = paired_delta(a, b, 2.0, 0.0, level=0.5, m=2, n=8)
+    assert d.estimate == 2.0
+    assert (d.lo, d.hi) == (1.5, 2.5)
+    # identical to applying subsample_interval to the delta distribution
+    # directly, anchored on the observed delta
+    iv = subsample_interval(2.0, [x - y for x, y in zip(a, b)], m=2, n=8, level=0.5)
+    assert (d.lo, d.hi) == (iv.lo, iv.hi)
+
+
+def test_paired_delta_subsample_prob_positive_uses_the_rescaled_distribution():
+    # Same fixture as above. The raw deltas are [0, 1, 2, 3, 4], of which 4/5
+    # are strictly positive. The tau-rescaled deltas are
+    #   2.0 + 0.5 * (d - 2.0) = [1.0, 1.5, 2.0, 2.5, 3.0]
+    # — all five positive, because the size-2 replicates are over-dispersed by
+    # sqrt(n / m) and the rescaling removes exactly that. Reporting 0.8 next to
+    # an interval of [1.5, 2.5] that excludes zero would be self-contradictory.
+    a = [0.0, 1.0, 2.0, 3.0, 4.0]
+    b = [0.0] * 5
+    assert paired_delta(a, b, 2.0, 0.0, level=0.5, m=2, n=8).prob_positive == 1.0
+    assert paired_delta(a, b, 2.0, 0.0, level=0.5).prob_positive == 0.8   # raw, no rescale
+
+
+def test_paired_delta_without_m_and_n_is_exactly_the_percentile_path():
+    # The classical with-replacement path must stay bit-identical: floating
+    # point makes `est + 1.0 * (q - est)` differ from `q` in the last bits, so
+    # this asserts equality, not approximate equality, against
+    # percentile_interval over the same paired differences.
+    a = [0.1 * i for i in range(37)]
+    b = [0.03 * i for i in range(37)]
+    d = paired_delta(a, b, 1.7, 0.4)
+    pct = percentile_interval(1.7 - 0.4, [x - y for x, y in zip(a, b)])
+    assert (d.lo, d.hi) == (pct.lo, pct.hi)
+    assert d.prob_positive == sum(1 for x, y in zip(a, b) if x - y > 0) / 37
+
+
+def test_paired_delta_subsample_is_narrower_than_reading_the_draws_as_a_bootstrap():
+    # tau = sqrt(m / n) < 1, so the subsample band is strictly inside the band
+    # you get by (wrongly) reading size-m deltas as full-size bootstrap deltas.
+    a = [float(i) for i in range(100)]
+    b = [0.0] * 100
+    sub = paired_delta(a, b, 50.0, 0.0, m=25, n=100)
+    raw = paired_delta(a, b, 50.0, 0.0)
+    assert raw.lo < sub.lo < sub.hi < raw.hi
+
+
+@pytest.mark.parametrize(("m", "n"), [(2, None), (None, 8)])
+def test_paired_delta_rejects_half_specified_draw_sizes(m, n):
+    # Silently falling back to the n-out-of-n percentile path on a typo'd
+    # keyword would report a subsample delta with no rescaling at all.
+    with pytest.raises(ValueError, match="both m and n"):
+        paired_delta([1.0, 2.0], [0.0, 1.0], 1.5, 0.5, m=m, n=n)
+
+
+def test_paired_delta_propagates_the_subsample_draw_size_guard():
+    with pytest.raises(ValueError, match="0 < m <= n"):
+        paired_delta([1.0, 2.0], [0.0, 1.0], 1.5, 0.5, m=9, n=4)
+
+
+def test_paired_delta_degenerate_when_nothing_was_resampled():
+    # n == 0: every document held fixed. subsample_interval reports a zero-width
+    # interval at the observed delta; prob_positive must agree with it rather
+    # than report variability that does not exist.
+    d = paired_delta([2.0] * 4, [1.0] * 4, 2.0, 1.0, m=0, n=0)
+    assert (d.estimate, d.lo, d.hi, d.prob_positive) == (1.0, 1.0, 1.0, 1.0)

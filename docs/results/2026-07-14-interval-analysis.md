@@ -1,5 +1,20 @@
 # Interval & Permutation Analysis — M2 through M5
 
+> **SUPERSEDED for the M3 sections (2026-08-01), pending regeneration.** The
+> §1 paired deltas and the §2.2 / threshold-curve M3 `clustering` intervals in
+> this document were produced by the n-out-of-n bootstrap. `clustering` is a
+> *pooled* metric, and a with-replacement draw re-keys a duplicated document
+> into two mention instances that agree with each other by construction, which
+> inflates B³/ARI. `scripts/interval_analysis.py` now draws those bundles with
+> m-out-of-n subsampling and reports the matching rescaled intervals, and it
+> emits three pairwise deltas (exact-label -> stemmed-label ->
+> embedding-nn@0.90) rather than one. **No number below has been edited**
+> (GC8); re-run
+> `uv run --no-sync python scripts/interval_analysis.py reports/intervals/analysis`
+> and rewrite the M3 sections from the regenerated JSON. The methodology recap
+> below still describes the old scheme for the M3 rows. The M5 holistic
+> bootstrap and the order-permutation sweep are unaffected.
+
 This is the Task 11 deliverable of the `lattice.harness.stats` credibility
 track: it runs the interval/permutation layer (Tasks 1–10) on the real
 corpora (ConEL-2, ECB+, Inspec, TExEval-2) with the real ML models (spaCy

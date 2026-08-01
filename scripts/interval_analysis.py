@@ -2,7 +2,7 @@
 stability sweep, for docs/results/2026-07-14-interval-analysis.md (Task 11).
 
 Pure orchestration over the tested library primitives — `run_experiment_detailed`,
-`bootstrap`, `jackknife`, `paired_delta`, `bca_interval`, `order_spread` — no new
+`bootstrap`, `paired_delta`, `subsample_interval`, `order_spread` — no new
 statistical algorithms are implemented here.
 
 M3 runs on BOTH ConEL-2 and ECB+ independently (task-11-brief-v2 scope
@@ -15,18 +15,23 @@ an out-of-sample replication check of the resolver-improvement claim.
 Writes JSON to <out_dir>/{m3-paired-delta,m3-threshold-curve,permutation-spread}.json
 (gitignored, regenerable) and prints a human-readable summary to stdout.
 
-Known limitation: `clustering` is a *pooled* metric, so its n-out-of-n
-bootstrap draws carry the with-replacement duplication bias that
-`lattice.harness.stats.report` now avoids by subsampling pooled bundles
-(scheme="subsample"). This script deliberately still passes the default
-scheme="resample", because both of its constructions here — `paired_delta` and
-`bca_interval` — assume full-size bootstrap draws and have no subsampling
-counterpart yet, and because the numbers in
-docs/results/2026-07-14-interval-analysis.md were published from this scheme.
-Moving it needs a paired/accelerated subsampling design; until then read the
-absolute b3-f1 CI widths here as optimistic. The *paired delta* is the less
-affected quantity: both arms are drawn with the same seed, so the duplication
-artifact is common to the pair and largely differences out.
+Scheme: `clustering` is a *pooled* metric — B³ and ARI score a cross-document
+pool of mentions, so they are degree-2 functionals and a with-replacement draw
+manufactures self-agreeing mention pairs that inflate them. Every bootstrap
+call here therefore uses scheme="subsample" (m-out-of-n, without replacement),
+the same rule `lattice.harness.stats.report` applies by bundle kind, and both
+constructions are the matching subsampling ones: `paired_delta(..., m=, n=)`
+for the deltas and `subsample_interval` for the threshold curve. BCa is not
+reachable from the subsample path (it assumes full-size bootstrap draws), so
+the threshold curve's `ci_method` is `"subsample"` rather than `"bca"` and
+there is no jackknife pass.
+
+The three-way M3 comparison (exact-label -> stemmed-label ->
+embedding-nn@0.90) exists because embedding-nn@0.90 makes only 7/452 merges
+beyond exact-label on ConEL-2 and the Snowball stemmer reproduces 6 of the 7,
+so `stemmed-label` — not `exact-label` — is the honest baseline for the
+identity claim. All three pairwise deltas are emitted so the claim can be
+stated against either baseline.
 """
 
 import json
@@ -35,12 +40,18 @@ from pathlib import Path
 
 from lattice.config.loader import load_config
 from lattice.harness.runner import ExperimentConfig, run_experiment_detailed
-from lattice.harness.stats.intervals import DeltaResult, Interval, bca_interval, paired_delta
+from lattice.harness.stats.intervals import (
+    DeltaResult,
+    Interval,
+    paired_delta,
+    subsample_interval,
+)
 from lattice.harness.stats.permutation import order_spread
-from lattice.harness.stats.resample import ResampleBundle, bootstrap, jackknife
+from lattice.harness.stats.resample import BootstrapDraws, ResampleBundle, bootstrap
 
 ITEM_SAMPLES = 10000  # matches the CLI's item-level default (Task 10)
-BOOTSTRAP_SEED = 0  # same seed on both configs' bundles -> paired draws by construction
+BOOTSTRAP_SEED = 0  # same seed on every arm's bundle -> paired draws by construction
+POOLED_SCHEME = "subsample"  # `clustering` is a pooled metric; see the module docstring
 PERMUTATIONS = 40
 PERMUTATION_SEED = 1
 LEVEL = 0.95
@@ -58,6 +69,11 @@ M3_CONFIGS = {
     },
 }
 
+# The three-way identity comparison (Task 7). Order is the normalization
+# ladder: raw string match -> morphological match -> embedding match.
+EXACT, STEMMED, NN090 = "exact-label", "stemmed-label", "embedding-nn@0.90"
+M3_PAIRS = ((NN090, EXACT), (STEMMED, EXACT), (NN090, STEMMED))
+
 M4_GOLDS = ["env-eurovoc", "food", "food-wordnet", "science", "science-eurovoc", "science-wordnet"]
 M4_CONFIG_TEMPLATE = "configs/m4-{gold}-union.toml"
 M5_CONFIG = "configs/m5-conel2-nn090.toml"
@@ -67,13 +83,19 @@ def _load(path: str) -> ExperimentConfig:
     return load_config(path, model=ExperimentConfig)
 
 
-def _with_threshold(base: ExperimentConfig, threshold: float) -> ExperimentConfig:
-    """A flat embedding-nn variant of `base` at `threshold` — built in-memory
-    (spec amendment: only exact-label and nn@0.90 need committed TOML files;
-    the rest of the threshold grid is programmatic)."""
+def _with_resolver(base: ExperimentConfig, resolver: dict) -> ExperimentConfig:
+    """A flat variant of `base` with its resolver replaced — built in-memory
+    (spec amendment: only exact-label and nn@0.90 need committed collapsed TOML
+    files; the threshold grid and the stemmed-label arm are programmatic.
+    configs/m3-*-stemmed.toml does exist, but it is the three-way *sweep*
+    config, not a collapsed single-config, so it is not an ExperimentConfig)."""
     data = base.model_dump()
-    data["resolver"] = {"name": "embedding-nn", "params": {"threshold": threshold}}
+    data["resolver"] = resolver
     return ExperimentConfig.model_validate(data)
+
+
+def _with_threshold(base: ExperimentConfig, threshold: float) -> ExperimentConfig:
+    return _with_resolver(base, {"name": "embedding-nn", "params": {"threshold": threshold}})
 
 
 def _clustering_bundle(config: ExperimentConfig) -> tuple[float, ResampleBundle]:
@@ -81,43 +103,85 @@ def _clustering_bundle(config: ExperimentConfig) -> tuple[float, ResampleBundle]
     return report.metrics["clustering"]["b3-f1"], bundles["clustering"]
 
 
-def m3_paired_delta(corpus: str) -> dict:
-    """nn@0.90 - exact-label on b3-f1, via bootstrap() run with the SAME seed
-    on both configs' clustering bundles -> iteration i draws identical
-    document indices (paired by construction), then paired_delta()."""
+def _m3_arm_configs(corpus: str) -> dict[str, ExperimentConfig]:
     exact_cfg = _load(M3_CONFIGS[corpus]["exact-label"])
-    nn090_cfg = _load(M3_CONFIGS[corpus]["nn@0.90"])
-    est_exact, exact_bundle = _clustering_bundle(exact_cfg)
-    est_nn090, nn090_bundle = _clustering_bundle(nn090_cfg)
-    exact_resamples = bootstrap(exact_bundle, samples=ITEM_SAMPLES, seed=BOOTSTRAP_SEED).draws
-    nn090_resamples = bootstrap(nn090_bundle, samples=ITEM_SAMPLES, seed=BOOTSTRAP_SEED).draws
-    delta: DeltaResult = paired_delta(
-        nn090_resamples["b3-f1"], exact_resamples["b3-f1"], est_nn090, est_exact, level=LEVEL
-    )
     return {
-        "corpus": corpus,
-        "exact_label_b3_f1": est_exact,
-        "nn090_b3_f1": est_nn090,
-        "delta_estimate": delta.estimate,
-        "ci_lo": delta.lo,
-        "ci_hi": delta.hi,
-        "prob_positive": delta.prob_positive,
-        "samples": ITEM_SAMPLES,
-        "seed": BOOTSTRAP_SEED,
+        EXACT: exact_cfg,
+        STEMMED: _with_resolver(exact_cfg, {"name": "stemmed-label"}),
+        NN090: _load(M3_CONFIGS[corpus]["nn@0.90"]),
     }
 
 
+def m3_paired_deltas(corpus: str) -> list[dict]:
+    """The three pairwise b3-f1 deltas across the identity ladder, each from
+    bootstrap() run with the SAME seed and the SAME scheme on every arm's
+    clustering bundle -> iteration i draws identical document indices in every
+    arm (paired by construction), then paired_delta() with the arms' (m, n) so
+    the size-m delta distribution is rescaled by sqrt(m / n).
+
+    The pairing is only "by construction" while the arms enumerate documents
+    identically, which is what makes the draw sequences share an RNG stream;
+    that precondition is checked below rather than assumed."""
+    arms: dict[str, tuple[float, BootstrapDraws]] = {}
+    doc_ids: list[str] | None = None
+    for label, cfg in _m3_arm_configs(corpus).items():
+        estimate, bundle = _clustering_bundle(cfg)
+        ids = list(bundle.per_document)
+        if doc_ids is None:
+            doc_ids = ids
+        elif ids != doc_ids:
+            raise ValueError(
+                f"m3 arm {label!r} on {corpus} enumerates documents differently from the "
+                "first arm, so bootstrap draws would not be paired across arms"
+            )
+        arms[label] = (
+            estimate,
+            bootstrap(bundle, samples=ITEM_SAMPLES, seed=BOOTSTRAP_SEED, scheme=POOLED_SCHEME),
+        )
+    rows = []
+    for label_a, label_b in M3_PAIRS:
+        est_a, drawn_a = arms[label_a]
+        est_b, drawn_b = arms[label_b]
+        delta: DeltaResult = paired_delta(
+            drawn_a.draws["b3-f1"], drawn_b.draws["b3-f1"], est_a, est_b,
+            level=LEVEL, m=drawn_a.m, n=drawn_a.n,
+        )
+        rows.append({
+            "corpus": corpus,
+            "pair": f"{label_a} - {label_b}",
+            "arm_a": label_a,
+            "arm_b": label_b,
+            "b3_f1_a": est_a,
+            "b3_f1_b": est_b,
+            "delta_estimate": delta.estimate,
+            "ci_lo": delta.lo,
+            "ci_hi": delta.hi,
+            "prob_positive": delta.prob_positive,
+            "scheme": drawn_a.scheme,
+            "m": drawn_a.m,
+            "n": drawn_a.n,
+            "samples": ITEM_SAMPLES,
+            "seed": BOOTSTRAP_SEED,
+        })
+    return rows
+
+
 def m3_threshold_curve(corpus: str) -> list[dict]:
-    """b3-f1 estimate + BCa CI at each threshold in THRESHOLD_GRID, 0.90
-    marked as the pre-registered (not re-tuned) operating point."""
+    """b3-f1 estimate + m-out-of-n subsampling CI at each threshold in
+    THRESHOLD_GRID, 0.90 marked as the pre-registered (not re-tuned) operating
+    point. `brackets_estimate` is necessary-not-sufficient — read it the way
+    lattice.harness.stats.report._brackets documents."""
     base_cfg = _load(M3_CONFIGS[corpus]["nn@0.90"])
     rows = []
     for threshold in THRESHOLD_GRID:
         cfg = base_cfg if threshold == OPERATING_THRESHOLD else _with_threshold(base_cfg, threshold)
         estimate, bundle = _clustering_bundle(cfg)
-        resamples = bootstrap(bundle, samples=ITEM_SAMPLES, seed=BOOTSTRAP_SEED).draws
-        jack = jackknife(bundle)
-        ci: Interval = bca_interval(estimate, resamples["b3-f1"], jack["b3-f1"], level=LEVEL)
+        drawn = bootstrap(
+            bundle, samples=ITEM_SAMPLES, seed=BOOTSTRAP_SEED, scheme=POOLED_SCHEME
+        )
+        ci: Interval = subsample_interval(
+            estimate, drawn.draws["b3-f1"], m=drawn.m, n=drawn.n, level=LEVEL
+        )
         rows.append({
             "corpus": corpus,
             "threshold": threshold,
@@ -125,6 +189,10 @@ def m3_threshold_curve(corpus: str) -> list[dict]:
             "ci_lo": ci.lo,
             "ci_hi": ci.hi,
             "ci_method": ci.method,
+            "scheme": drawn.scheme,
+            "m": drawn.m,
+            "n": drawn.n,
+            "brackets_estimate": ci.lo <= estimate <= ci.hi,
             "is_operating_point": threshold == OPERATING_THRESHOLD,
         })
     return rows
@@ -149,7 +217,7 @@ def permutation_spread(path: str, *, fixed_prefix: int, label: str) -> dict:
 
 
 def run_all() -> dict:
-    m3_delta = [m3_paired_delta(corpus) for corpus in M3_CONFIGS]
+    m3_delta = [row for corpus in M3_CONFIGS for row in m3_paired_deltas(corpus)]
     m3_curve = {corpus: m3_threshold_curve(corpus) for corpus in M3_CONFIGS}
     permutations = []
     # M3: nn@0.90 (the operating point under test) per corpus, fixed_prefix=0
@@ -173,22 +241,24 @@ def run_all() -> dict:
 
 
 def _print_summary(results: dict) -> None:
-    print("=== M3 paired delta (nn@0.90 - exact-label, b3-f1) ===")
+    print("=== M3 paired deltas (b3-f1, m-out-of-n subsampling, 95% CI) ===")
     for row in results["m3_paired_delta"]:
         print(
-            f"{row['corpus']}: exact={row['exact_label_b3_f1']:.4f} "
-            f"nn090={row['nn090_b3_f1']:.4f} delta={row['delta_estimate']:+.4f} "
+            f"{row['corpus']} {row['pair']}: "
+            f"a={row['b3_f1_a']:.4f} b={row['b3_f1_b']:.4f} "
+            f"delta={row['delta_estimate']:+.4f} "
             f"95% CI=[{row['ci_lo']:+.4f}, {row['ci_hi']:+.4f}] "
-            f"prob_positive={row['prob_positive']:.4f}"
+            f"prob_positive={row['prob_positive']:.4f} (m={row['m']}, n={row['n']})"
         )
-    print("\n=== M3 threshold-sensitivity curve (b3-f1, BCa 95% CI) ===")
+    print("\n=== M3 threshold-sensitivity curve (b3-f1, subsampling 95% CI) ===")
     for corpus, rows in results["m3_threshold_curve"].items():
         print(f"-- {corpus} --")
         for row in rows:
             marker = " <= operating point" if row["is_operating_point"] else ""
+            flag = "" if row["brackets_estimate"] else "  [does NOT bracket its estimate]"
             print(
                 f"  threshold={row['threshold']:.2f} b3-f1={row['b3_f1']:.4f} "
-                f"CI=[{row['ci_lo']:.4f}, {row['ci_hi']:.4f}]{marker}"
+                f"CI=[{row['ci_lo']:.4f}, {row['ci_hi']:.4f}]{marker}{flag}"
             )
     print(f"\n=== Order-permutation spread (K={PERMUTATIONS}, seed={PERMUTATION_SEED}) ===")
     for entry in results["permutation_spread"]:
