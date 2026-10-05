@@ -3,6 +3,7 @@ persistence, format versioning, idempotent round-trip. Top-level imports
 only."""
 
 import json
+from pathlib import Path
 
 import pytest
 
@@ -44,6 +45,8 @@ _STEMMED_CONFIG = {
 STEM_A = "Clusters restart automatically."
 STEM_B = "A cluster rejoined smoothly."
 STEM_C = "Every cluster deployment succeeded."
+
+V1_FIXTURE = Path(__file__).parent.parent / "fixtures" / "saves" / "v1_lite_after_A_B.json"
 
 
 class _FailOnBeta(RelationInducer):
@@ -150,13 +153,13 @@ def test_save_file_shape(tmp_path):
     path = tmp_path / "memory.json"
     engine.save(path)
     payload = json.loads(path.read_text())
-    assert payload["format_version"] == 1
+    assert payload["format_version"] == 2
     assert payload["profile"] == "lite"
     assert payload["document_counter"] == 1
     assert {c["label"] for c in payload["concepts"]} >= {"olive", "cooking"}
     assert set(payload) == {
         "format_version", "lattice_version", "profile", "config",
-        "document_counter", "concepts", "relations",
+        "document_counter", "concepts", "relations", "resolver_state",
     }
 
 
@@ -165,6 +168,38 @@ def test_save_load_save_is_byte_identical(tmp_path):
     engine.ingest_all([TEXT_A, TEXT_B])
     first = tmp_path / "first.json"
     engine.save(first)
+    second = tmp_path / "second.json"
+    Engine.load(first).save(second)
+    assert first.read_bytes() == second.read_bytes()
+
+
+def test_load_rejects_missing_resolver_state(tmp_path):
+    path = tmp_path / "memory.json"
+    Engine().save(path)
+    payload = json.loads(path.read_text())
+    del payload["resolver_state"]
+    path.write_text(json.dumps(payload))
+    with pytest.raises(ValueError, match="resolver_state"):
+        Engine.load(path)
+
+
+def test_load_rejects_non_object_resolver_state(tmp_path):
+    path = tmp_path / "memory.json"
+    Engine().save(path)
+    payload = json.loads(path.read_text())
+    payload["resolver_state"] = "oops"
+    path.write_text(json.dumps(payload))
+    with pytest.raises(ValueError, match="resolver_state"):
+        Engine.load(path)
+
+
+def test_stemmed_save_load_save_is_byte_identical(tmp_path):
+    engine = Engine.from_config(_STEMMED_CONFIG)
+    engine.ingest_all([STEM_A, STEM_B])
+    first = tmp_path / "first.json"
+    engine.save(first)
+    # cache has to be non-empty or this check proves nothing
+    assert json.loads(first.read_text())["resolver_state"]["concept_id_by_stem"]
     second = tmp_path / "second.json"
     Engine.load(first).save(second)
     assert first.read_bytes() == second.read_bytes()
@@ -199,3 +234,69 @@ def test_load_rejects_concept_with_wrong_embedding_dimension(tmp_path):
     path.write_text(json.dumps(payload))
     with pytest.raises(ValueError, match=bad_concept["id"]):
         Engine.load(path)
+
+
+def _by_id(concepts):
+    # snapshot orders may differ between resolver and graph; compare as sets of ids
+    return sorted(concepts, key=lambda c: c.id)
+
+
+def test_resolver_concepts_equal_graph_concepts_for_lite():
+    engine = Engine()
+    engine.ingest_all([TEXT_A, TEXT_B, TEXT_C])
+    resolver_concepts = engine._orchestrator.resolver.snapshot().concepts
+    assert _by_id(resolver_concepts) == _by_id(engine.snapshot().concepts)
+
+
+def test_resolver_concepts_equal_graph_concepts_for_stemmed_after_skipped_doc():
+    engine = Engine.from_config({**_STEMMED_CONFIG, "run": {"on_error": "skip", "seed": 0}})
+    engine._orchestrator.relation_inducer = _FailOnBeta(engine._orchestrator.relation_inducer)
+    engine.ingest_all([STEM_A, "Beta cluster failures happened.", STEM_C])
+    resolver_concepts = engine._orchestrator.resolver.snapshot().concepts
+    assert _by_id(resolver_concepts) == _by_id(engine.snapshot().concepts)
+
+
+def test_stemmed_cache_survives_save_load(tmp_path):
+    engine = Engine.from_config(_STEMMED_CONFIG)
+    engine.ingest_all([STEM_A, STEM_B])
+    before = engine._orchestrator.resolver.snapshot()
+    assert before.private["concept_id_by_stem"]  # cache is actually populated
+    path = tmp_path / "memory.json"
+    engine.save(path)
+    assert json.loads(path.read_text())["resolver_state"] == before.private
+    resumed = Engine.load(path)
+    assert resumed._orchestrator.resolver.snapshot() == before
+
+
+def test_resume_equivalence_after_caught_fail(tmp_path):
+    """A raises-and-is-caught under "fail" must not leak into the saved state."""
+
+    def flaky() -> Engine:
+        engine = Engine.from_config(_STEMMED_CONFIG)
+        engine._orchestrator.relation_inducer = _FailOnBeta(
+            engine._orchestrator.relation_inducer
+        )
+        return engine
+
+    beta = "Beta cluster restarts failed."
+    straight = flaky()
+    straight.ingest(STEM_A)
+    with pytest.raises(RuntimeError):
+        straight.ingest(beta)
+    straight.ingest(STEM_C)
+
+    interrupted = flaky()
+    interrupted.ingest(STEM_A)
+    with pytest.raises(RuntimeError):
+        interrupted.ingest(beta)
+    path = tmp_path / "memory.json"
+    interrupted.save(path)
+    resumed = Engine.load(path)
+    resumed.ingest(STEM_C)
+
+    assert resumed.snapshot() == straight.snapshot()
+
+
+def test_load_rejects_v1_file_and_points_at_migration_script():
+    with pytest.raises(ValueError, match="migrate_save"):
+        Engine.load(V1_FIXTURE)

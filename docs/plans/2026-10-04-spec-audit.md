@@ -189,6 +189,7 @@ Follow-up code is listed in each ADR's Consequences:
 
 ## Parked
 
+- `tests/api/test_persistence.py` has no `ml`-marked tests, so save/load is never exercised on the `standard` profile (sentence-transformer embedder). Found by the C5 reviewer, 2026-10-04.
 - Finish themes T2–T6 (and unthemed) before planning the ADR-0001..0003 follow-up code. This
   came up after T1 was amended into the specs. The follow-up code is listed in the ADRs'
   Consequences (`decisions/0002-error-policy-and-per-document-atomicity.md`, "Follow-up code").

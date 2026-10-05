@@ -18,7 +18,7 @@ If you want either recorded, I can add a short amendment to ADR-0001/0003.
 
 ## Chunks
 
-**Status:** C6a done · C1–C3 done (753b2e9) · C4 + option B (rollback on BaseException) reviewer-approved, awaiting commit · C5–C7 not started.
+**Status:** C6a done · C1–C3 done (753b2e9) · C4 + option B done (0eea93a) · C5 reviewer-approved + follow-up, awaiting commit · C6–C7 not started.
 
 **C6a — v1 fixtures (done).** Generated from pre-change code: `tests/fixtures/saves/v1_lite_after_A_B.json` (`Engine()` + TEXT_A, TEXT_B from `tests/api/test_persistence.py`) and `v1_stemmed_after_STEM_A.json` (`_STEMMED_CONFIG` + STEM_A). Walking-skeleton baseline report saved to the session scratchpad as `baseline-walking-skeleton.json`.
 The chunks run in waves. Chunks within a wave are independent and can run in parallel. Each chunk is test-first: programmer → reviewer → you commit.
@@ -64,7 +64,7 @@ The chunks run in waves. Chunks within a wave are independent and can run in par
 **C5. Save format v2** (`engine.py`, `tests/api/test_persistence.py`)
 - Set `FORMAT_VERSION = 2`. `save` adds `resolver_state = resolver.snapshot().private`.
 - `load` restores the integrator, then calls `resolver.restore(ResolverState(graph concepts, resolver_state))`.
-- `reset` calls `resolver.reset()`. Remove the remaining `getattr`s. Fix the docstring at L150-157, since the divergence caveat is now gone.
+- `reset` calls `resolver.reset()`. Remove the remaining `getattr(..., "concept_store")` calls. (`getattr(resolver, "embedder", None)` at `engine.py:216` stays: it isn't store access, so it's out of scope.) Fix the docstring at L150-157, since the divergence caveat is now gone.
 - Update `test_save_file_shape` to version 2 with the new key.
 - Add an assertion that store concepts == graph concepts after ingest.
 - Test: resume-equivalence after a caught `fail`.

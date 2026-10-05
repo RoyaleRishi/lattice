@@ -25,7 +25,7 @@ from lattice.core.types import (
 )
 from lattice.graph_view import GraphView
 
-FORMAT_VERSION = 1
+FORMAT_VERSION = 2
 
 _UNION = {
     "name": "union",
@@ -149,13 +149,11 @@ class Engine:
 
     def save(self, path: str | Path) -> None:
         """Serialize the accreted graph + config to versioned JSON (format
-        v1, M6 spec §4.3). The concept store is not serialized separately:
-        resolvers upsert exactly the concepts the integrator holds, so the
-        snapshot is the single source of truth — true under on_error="skip"
-        because Orchestrator.process rolls the store back on failure. Under
-        "fail" no checkpoint is taken at all (the exception is expected to
-        propagate), so a caller that swallows it and keeps using the same
-        Engine can leave the store holding concepts the graph never saw."""
+        v2, M6 spec §4.3). Each document is atomic (ADR-0002), so the
+        resolver's store concepts always equal the graph's concepts; that is
+        why concepts are stored once, in "concepts". Only what the graph
+        cannot reconstruct, the resolver-private state, goes in
+        "resolver_state" (ADR-0001/0003)."""
         from lattice import __version__  # inside the function: no cycle
 
         snapshot = self._orchestrator.snapshot()
@@ -185,6 +183,7 @@ class Engine:
                 }
                 for r in snapshot.relations
             ],
+            "resolver_state": self._orchestrator.resolver.snapshot().private,
         }
         Path(path).write_text(json.dumps(payload, indent=2, sort_keys=True))
 
@@ -197,8 +196,14 @@ class Engine:
         if found != FORMAT_VERSION:
             raise ValueError(
                 f"unsupported save format_version {found!r} "
-                f"(this lattice reads {FORMAT_VERSION})"
+                f"(this lattice reads {FORMAT_VERSION}); "
+                "v1 files can be upgraded with scripts/migrate_save.py"
             )
+        # check this up front so nothing is restored from a half-valid file
+        if "resolver_state" not in payload:
+            raise ValueError("save file is missing 'resolver_state'")
+        if not isinstance(payload["resolver_state"], dict):
+            raise ValueError("'resolver_state' must be an object")
         engine = cls.__new__(cls)
         engine._init(
             RunConfig.model_validate(payload["config"]), payload["profile"]
@@ -235,7 +240,9 @@ class Engine:
         engine._orchestrator.graph_integrator.restore(
             GraphSnapshot(concepts=concepts, relations=relations)
         )
-        engine._orchestrator.resolver.restore(ResolverState(tuple(concepts), {}))
+        engine._orchestrator.resolver.restore(
+            ResolverState(concepts, payload["resolver_state"])
+        )
         engine._counter = int(payload["document_counter"])
         return engine
 
