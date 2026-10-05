@@ -49,7 +49,9 @@
       "Bash(/Users/rishis/.claude/plugins/cache/claude-plugins-official/superpowers/6.1.1/skills/subagent-driven-development/scripts/review-package a260afe *)",
       "Bash(PYTHONPATH=src uv run --no-sync python -c ' *)",
       "Bash(git -C /Users/rishis/Desktop/Projects/lattice log --oneline -3)",
-      "Bash(PYTHONPATH=src uv run --no-sync python3 -c ' *)"
+      "Bash(PYTHONPATH=src uv run --no-sync python3 -c ' *)",
+      "Bash(git remote *)",
+      "Read(//Users/rishis/.claude/standards/**)"
     ]
   }
 }
