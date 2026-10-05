@@ -189,6 +189,7 @@ Follow-up code is listed in each ADR's Consequences:
 
 ## Parked
 
+- `Engine.save` writes with a plain `write_text` (`src/lattice/engine.py:~188`), so a crash mid-write can leave a partial save file. This predates ADR-0003; the C6 reviewer flagged it on 2026-10-04.
 - `tests/api/test_persistence.py` has no `ml`-marked tests, so save/load is never exercised on the `standard` profile (sentence-transformer embedder). Found by the C5 reviewer, 2026-10-04.
 - Finish themes T2–T6 (and unthemed) before planning the ADR-0001..0003 follow-up code. This
   came up after T1 was amended into the specs. The follow-up code is listed in the ADRs'

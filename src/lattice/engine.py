@@ -187,6 +187,43 @@ class Engine:
         }
         Path(path).write_text(json.dumps(payload, indent=2, sort_keys=True))
 
+    def _graph_from_payload(
+        self, payload: dict
+    ) -> tuple[tuple[Concept, ...], tuple[Relation, ...]]:
+        """Parse saved concepts + relations (shared by load and
+        scripts/migrate_save.py) and check embedding dims against the
+        resolver's embedder."""
+        concepts = tuple(
+            Concept(
+                id=c["id"],
+                label=c["label"],
+                embedding=tuple(c["embedding"]),
+                first_seen=c["first_seen"],
+                updated_at=c["updated_at"],
+            )
+            for c in payload["concepts"]
+        )
+        embedder = getattr(self._orchestrator.resolver, "embedder", None)
+        if embedder is not None:
+            for concept in concepts:
+                found = len(concept.embedding)
+                if found != embedder.dim:
+                    raise ValueError(
+                        f"concept {concept.id!r} has embedding of length "
+                        f"{found}, expected {embedder.dim}"
+                    )
+        relations = tuple(
+            Relation(
+                type=r["type"],
+                source_id=r["source_id"],
+                target_id=r["target_id"],
+                confidence=r["confidence"],
+                provenance=r["provenance"],
+            )
+            for r in payload["relations"]
+        )
+        return concepts, relations
+
     @classmethod
     def load(cls, path: str | Path) -> "Engine":
         """Rebuild an Engine from a save file. Resume-equivalence contract:
@@ -208,35 +245,7 @@ class Engine:
         engine._init(
             RunConfig.model_validate(payload["config"]), payload["profile"]
         )
-        concepts = tuple(
-            Concept(
-                id=c["id"],
-                label=c["label"],
-                embedding=tuple(c["embedding"]),
-                first_seen=c["first_seen"],
-                updated_at=c["updated_at"],
-            )
-            for c in payload["concepts"]
-        )
-        embedder = getattr(engine._orchestrator.resolver, "embedder", None)
-        if embedder is not None:
-            for concept in concepts:
-                found = len(concept.embedding)
-                if found != embedder.dim:
-                    raise ValueError(
-                        f"concept {concept.id!r} has embedding of length "
-                        f"{found}, expected {embedder.dim}"
-                    )
-        relations = tuple(
-            Relation(
-                type=r["type"],
-                source_id=r["source_id"],
-                target_id=r["target_id"],
-                confidence=r["confidence"],
-                provenance=r["provenance"],
-            )
-            for r in payload["relations"]
-        )
+        concepts, relations = engine._graph_from_payload(payload)
         engine._orchestrator.graph_integrator.restore(
             GraphSnapshot(concepts=concepts, relations=relations)
         )
