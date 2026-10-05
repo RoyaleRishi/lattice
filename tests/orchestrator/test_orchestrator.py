@@ -154,3 +154,236 @@ def test_on_error_skip_rolls_back_concept_store_when_relation_inducer_fails():
     assert resolver.snapshot().concepts == before
     assert all(c.label != "encoder" for c in resolver.snapshot().concepts)
     assert all(c.label != "mention" for c in resolver.snapshot().concepts)
+
+
+# --- ADR-0002: every document is atomic under both policies ---------------
+
+
+class LateExplodingExtractor(Extractor):
+    """Fine on the first call, blows up on every later one."""
+
+    def __init__(self, inner):
+        self.inner = inner
+        self.calls = 0
+
+    def extract(self, units):
+        self.calls += 1
+        if self.calls > 1:
+            raise RuntimeError("boom-late")
+        return self.inner.extract(units)
+
+
+class PartialApplyIntegrator(InMemoryGraphIntegrator):
+    """Applies the first concept, then raises (an apply that dies midway)."""
+
+    def __init__(self):
+        super().__init__()
+        self.explode = False
+
+    def apply(self, resolutions, relations):
+        if not self.explode:
+            return super().apply(resolutions, relations)
+        super().apply(resolutions[:1], [])
+        raise RuntimeError("boom-mid-apply")
+
+
+def _run_bad_doc(orchestrator, doc):
+    """Process a doc that should fail; returns the delta under skip, None under fail."""
+    if orchestrator.on_error == "fail":
+        with pytest.raises(RuntimeError):
+            orchestrator.process(doc)
+        return None
+    return orchestrator.process(doc)
+
+
+@pytest.mark.parametrize("on_error", ["fail", "skip"])
+def test_failing_late_stage_leaves_graph_and_resolver_untouched(on_error):
+    orchestrator = build_orchestrator(on_error=on_error)
+    orchestrator.process(make_document(id="d0", text="vector store"))
+    graph_before = orchestrator.snapshot()
+    resolver_before = orchestrator.resolver.snapshot().concepts
+    orchestrator.relation_inducer = ExplodingRelationInducer()
+
+    delta = _run_bad_doc(orchestrator, make_document(id="d1", text="new mention encoder"))
+
+    if on_error == "skip":
+        assert len(delta.errors) == 1
+        assert "boom-in-relations" in delta.errors[0]
+    assert orchestrator.snapshot() == graph_before
+    assert orchestrator.resolver.snapshot().concepts == resolver_before
+
+
+@pytest.mark.parametrize("on_error", ["fail", "skip"])
+def test_failing_extractor_leaves_state_untouched(on_error):
+    extractor = LateExplodingExtractor(TokenExtractor(min_length=4))
+    orchestrator = build_orchestrator(extractor=extractor, on_error=on_error)
+    orchestrator.process(make_document(id="d0", text="vector store"))
+    graph_before = orchestrator.snapshot()
+    resolver_before = orchestrator.resolver.snapshot().concepts
+
+    _run_bad_doc(orchestrator, make_document(id="d1", text="new mention encoder"))
+
+    assert orchestrator.snapshot() == graph_before
+    assert orchestrator.resolver.snapshot().concepts == resolver_before
+
+
+@pytest.mark.parametrize("on_error", ["fail", "skip"])
+def test_integrator_failing_mid_apply_is_rolled_back(on_error):
+    integrator = PartialApplyIntegrator()
+    orchestrator = build_orchestrator(graph_integrator=integrator, on_error=on_error)
+    orchestrator.process(make_document(id="d0", text="vector store"))
+    graph_before = orchestrator.snapshot()
+    resolver_before = orchestrator.resolver.snapshot().concepts
+    integrator.explode = True
+
+    _run_bad_doc(orchestrator, make_document(id="d1", text="new mention encoder"))
+
+    assert orchestrator.snapshot() == graph_before
+    assert orchestrator.resolver.snapshot().concepts == resolver_before
+
+
+@pytest.mark.parametrize("on_error", ["fail", "skip"])
+def test_good_doc_after_caught_failure_matches_run_without_bad_doc(on_error):
+    orchestrator = build_orchestrator(on_error=on_error)
+    orchestrator.process(make_document(id="d0", text="vector store", timestamp=1.0))
+    good_inducer = orchestrator.relation_inducer
+    orchestrator.relation_inducer = ExplodingRelationInducer()
+    _run_bad_doc(
+        orchestrator, make_document(id="bad", text="poison mention", timestamp=2.0)
+    )
+    orchestrator.relation_inducer = good_inducer
+    delta = orchestrator.process(
+        make_document(id="d2", text="vector encoder", timestamp=3.0)
+    )
+    assert delta.errors == ()
+
+    clean = build_orchestrator(on_error=on_error)
+    clean.process(make_document(id="d0", text="vector store", timestamp=1.0))
+    clean.process(make_document(id="d2", text="vector encoder", timestamp=3.0))
+
+    assert orchestrator.snapshot() == clean.snapshot()
+    assert (
+        orchestrator.resolver.snapshot().concepts
+        == clean.resolver.snapshot().concepts
+    )
+
+
+class _BrokenRollbackIntegrator(InMemoryGraphIntegrator):
+    def rollback(self, token):
+        raise OSError("rollback-broke")
+
+
+def test_rollback_failure_is_raised_chained_from_original():
+    orchestrator = build_orchestrator(
+        graph_integrator=_BrokenRollbackIntegrator(),
+        relation_inducer=ExplodingRelationInducer(),
+        on_error="skip",
+    )
+    with pytest.raises(OSError, match="rollback-broke") as info:
+        orchestrator.process(make_document(id="d1", text="vector store"))
+    assert isinstance(info.value.__cause__, RuntimeError)
+    assert "boom-in-relations" in str(info.value.__cause__)
+
+
+# --- ADR-0002: rollback also runs on BaseException; policy only routes Exception ---
+
+
+class _InterruptingRelationInducer(RelationInducer):
+    """Raises KeyboardInterrupt after the resolver has already mutated."""
+
+    def induce(self, resolutions, units, document):
+        raise KeyboardInterrupt
+
+
+@pytest.mark.parametrize("on_error", ["fail", "skip"])
+def test_keyboard_interrupt_propagates_and_rolls_back(on_error):
+    orchestrator = build_orchestrator(
+        relation_inducer=_InterruptingRelationInducer(), on_error=on_error
+    )
+    graph_before = orchestrator.snapshot()
+    resolver_before = orchestrator.resolver.snapshot().concepts
+
+    # never turned into a skip delta, even under "skip"
+    with pytest.raises(KeyboardInterrupt):
+        orchestrator.process(make_document(id="d1", text="new mention encoder"))
+
+    assert orchestrator.snapshot() == graph_before
+    assert orchestrator.resolver.snapshot().concepts == resolver_before
+
+
+class _RecordingResolver(ExactLabelResolver):
+    """Counts rollbacks; can fail its checkpoint or its rollback on demand."""
+
+    def __init__(self, *args, fail_checkpoint=False, fail_rollback=False, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fail_checkpoint = fail_checkpoint
+        self.fail_rollback = fail_rollback
+        self.rollbacks = 0
+
+    def checkpoint(self):
+        if self.fail_checkpoint:
+            raise RuntimeError("checkpoint-broke")
+        return super().checkpoint()
+
+    def rollback(self, token):
+        self.rollbacks += 1
+        if self.fail_rollback:
+            raise ValueError("resolver-rollback-broke")
+        return super().rollback(token)
+
+
+def _recording_resolver(**kwargs):
+    return _RecordingResolver(
+        embedder=HashingEmbedder(dim=16), concept_store=InMemoryConceptStore(), **kwargs
+    )
+
+
+@pytest.mark.parametrize("on_error", ["fail", "skip"])
+def test_failing_checkpoint_follows_policy_without_rollback(on_error):
+    resolver = _recording_resolver(fail_checkpoint=True)
+    orchestrator = build_orchestrator(resolver=resolver, on_error=on_error)
+    graph_before = orchestrator.snapshot()
+    resolver_before = resolver.snapshot().concepts
+
+    delta = _run_bad_doc(orchestrator, make_document(id="d1", text="vector store"))
+
+    if on_error == "skip":
+        assert "checkpoint-broke" in delta.errors[0]
+    assert resolver.rollbacks == 0
+    assert orchestrator.snapshot() == graph_before
+    assert resolver.snapshot().concepts == resolver_before
+
+
+def test_resolver_rollback_failure_is_raised_chained_from_original():
+    orchestrator = build_orchestrator(
+        resolver=_recording_resolver(fail_rollback=True),
+        relation_inducer=ExplodingRelationInducer(),
+        on_error="skip",
+    )
+    with pytest.raises(ValueError, match="resolver-rollback-broke") as info:
+        orchestrator.process(make_document(id="d1", text="vector store"))
+    assert isinstance(info.value.__cause__, RuntimeError)
+
+
+def test_second_rollback_failure_is_attached_as_note():
+    orchestrator = build_orchestrator(
+        resolver=_recording_resolver(fail_rollback=True),
+        graph_integrator=_BrokenRollbackIntegrator(),
+        relation_inducer=ExplodingRelationInducer(),
+        on_error="fail",
+    )
+    with pytest.raises(ValueError, match="resolver-rollback-broke") as info:
+        orchestrator.process(make_document(id="d1", text="vector store"))
+    assert any("rollback-broke" in n for n in info.value.__notes__)
+    assert any("OSError" in n for n in info.value.__notes__)
+
+
+def test_rollback_failure_on_keyboard_interrupt_is_chained_from_it():
+    orchestrator = build_orchestrator(
+        graph_integrator=_BrokenRollbackIntegrator(),
+        relation_inducer=_InterruptingRelationInducer(),
+        on_error="skip",
+    )
+    with pytest.raises(OSError, match="rollback-broke") as info:
+        orchestrator.process(make_document(id="d1", text="vector store"))
+    assert isinstance(info.value.__cause__, KeyboardInterrupt)

@@ -80,8 +80,8 @@ class Engine:
 
     Errors propagate ("fail" policy) in both profiles — a consumer that
     prefers poison-document tolerance passes on_error="skip" via
-    from_config and inspects delta.errors (partial-mutation caveat: see
-    Orchestrator docstring)."""
+    from_config and inspects delta.errors. Either way each document is
+    atomic: a failed one is rolled back (ADR-0002)."""
 
     def __init__(self, profile: str = "lite"):
         if profile not in _PROFILES:

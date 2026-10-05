@@ -19,18 +19,16 @@ from lattice.ports import (
 class Orchestrator:
     """Runs the six-stage pipeline over one document at a time.
 
-    Error policy (spec §8): "fail" re-raises the stage exception (a crash
-    never silently shrinks the scored corpus); "skip" records the error in
-    the GraphDelta and moves on (one poison document can't halt the stream).
-    Under "skip", the concept store is checkpointed before the pipeline runs
-    and rolled back if a later stage (e.g. the relation inducer) raises, so
-    a document that fails after the resolver has already upserted concepts
-    can never leave the store diverged from the graph. The graph integrator
-    itself is not checkpointed — that is sound today only because the
-    in-memory integrator's apply() cannot fail partway through (its two
-    loops are dict assignments over already-built values); a future
-    integrator with a fallible apply() (e.g. one doing I/O) would need its
-    own rollback, which the GraphIntegrator port does not require.
+    Every document is atomic under both error policies (ADR-0002): the
+    resolver and the graph integrator are checkpointed before the pipeline
+    runs, and both are rolled back if any stage raises, so a failed document
+    leaves no trace. The policy only routes the error (spec §8): "fail"
+    re-raises the original exception (a crash never silently shrinks the
+    scored corpus); "skip" records it in the GraphDelta and moves on (one
+    poison document can't halt the stream). If a rollback itself fails, the
+    state can't be trusted, so that error is raised chained from the original
+    under either policy. Atomicity holds for every exit, including
+    KeyboardInterrupt; the policy only routes Exceptions.
     """
 
     def __init__(
@@ -53,10 +51,11 @@ class Orchestrator:
         self.on_error = on_error
 
     def process(self, document: Document) -> GraphDelta:
-        checkpoint = None
-        if self.on_error == "skip":
-            checkpoint = self.resolver.checkpoint()
+        r_tok = g_tok = None
         try:
+            # a failing checkpoint hasn't mutated anything, so no rollback for it
+            r_tok = self.resolver.checkpoint()
+            g_tok = self.graph_integrator.checkpoint()
             units = self.segmenter.segment(document)
             mentions = self.extractor.extract(units)
             scored = self.scorer.score(mentions, units)
@@ -65,9 +64,9 @@ class Orchestrator:
             relations = self.relation_inducer.induce(resolutions, units, document)
             self.graph_integrator.apply(resolutions, relations)
         except Exception as exc:
+            self._rollback(r_tok, g_tok, exc)  # ADR-0002: atomic under both policies
             if self.on_error == "fail":
                 raise
-            self.resolver.rollback(checkpoint)
             return GraphDelta(
                 document_id=document.id,
                 concepts_added=(),
@@ -75,6 +74,11 @@ class Orchestrator:
                 relations_added=(),
                 errors=(f"{type(exc).__name__}: {exc}",),
             )
+        except BaseException as exc:
+            # ADR-0002: Ctrl-C / SystemExit also roll back, then pass through
+            # untouched; never turned into a skip delta
+            self._rollback(r_tok, g_tok, exc)
+            raise
 
         added: dict[str, Concept] = {}
         updated: dict[str, Concept] = {}
@@ -97,6 +101,22 @@ class Orchestrator:
             selected_mentions=tuple(selected),
             resolutions=tuple(resolutions),
         )
+
+    def _rollback(self, r_tok, g_tok, original: BaseException) -> None:
+        # try both even if one fails; a token is None if its checkpoint never ran
+        failure: Exception | None = None
+        for target, tok in ((self.resolver, r_tok), (self.graph_integrator, g_tok)):
+            if tok is None:
+                continue
+            try:
+                target.rollback(tok)
+            except Exception as rb_exc:
+                if failure is None:
+                    failure = rb_exc
+                else:  # keep the second failure visible instead of dropping it
+                    failure.add_note(f"also failed: {type(rb_exc).__name__}: {rb_exc}")
+        if failure is not None:
+            raise failure from original
 
     def process_stream(self, documents: Iterable[Document]) -> list[GraphDelta]:
         return [self.process(document) for document in documents]

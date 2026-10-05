@@ -13,3 +13,6 @@ reports/**
 !reports/**/*.md
 docs/papers/
 .superpowers/
+
+# Claude Code hook logs
+.claude/logs/
