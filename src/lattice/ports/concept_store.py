@@ -29,12 +29,15 @@ class ConceptStore(ABC):
 
     @abstractmethod
     def checkpoint(self) -> object:
-        """Return an opaque snapshot token of the current state, for
-        rollback() to restore later (the skip-path recovery in
-        Orchestrator.process)."""
+        """Open a checkpoint and return an opaque token for it (ADR-0002).
+        The token is only valid until the next checkpoint(): a new checkpoint
+        commits the previous one, so only the latest can be rolled back.
+        Used by the skip-path recovery in Orchestrator.process."""
         ...
 
     @abstractmethod
     def rollback(self, token: object) -> None:
-        """Restore state to a token previously returned by checkpoint()."""
+        """Restore state to the latest checkpoint and close it. Raises
+        ValueError if the token is not the current open checkpoint (stale,
+        superseded by a newer checkpoint, or already rolled back)."""
         ...

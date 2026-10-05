@@ -54,11 +54,8 @@ class Orchestrator:
 
     def process(self, document: Document) -> GraphDelta:
         checkpoint = None
-        store = None
         if self.on_error == "skip":
-            store = getattr(self.resolver, "concept_store", None)
-            if store is not None:
-                checkpoint = store.checkpoint()
+            checkpoint = self.resolver.checkpoint()
         try:
             units = self.segmenter.segment(document)
             mentions = self.extractor.extract(units)
@@ -70,8 +67,7 @@ class Orchestrator:
         except Exception as exc:
             if self.on_error == "fail":
                 raise
-            if store is not None:
-                store.rollback(checkpoint)
+            self.resolver.rollback(checkpoint)
             return GraphDelta(
                 document_id=document.id,
                 concepts_added=(),

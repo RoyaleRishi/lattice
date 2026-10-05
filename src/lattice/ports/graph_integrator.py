@@ -22,3 +22,16 @@ class GraphIntegrator(ABC):
 
     @abstractmethod
     def reset(self) -> None: ...
+
+    @abstractmethod
+    def checkpoint(self) -> object:
+        """Mark the current state and return an opaque token (ADR-0002).
+        Starts a fresh undo log and implicitly commits any previous one."""
+        ...
+
+    @abstractmethod
+    def rollback(self, token: object) -> None:
+        """Restore state exactly as of the checkpoint that issued `token`
+        (ADR-0002). Raises ValueError if the token isn't the current open
+        checkpoint (stale, superseded, or already rolled back)."""
+        ...

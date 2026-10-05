@@ -63,6 +63,16 @@ class Concept:
 
 
 @dataclass(frozen=True, slots=True)
+class ResolverState:
+    """Everything a resolver needs to resume (ADR-0001). `concepts` is the
+    resolver's store contents sorted by id (deterministic); `private` is
+    resolver-private state and must be JSON-serializable."""
+
+    concepts: tuple[Concept, ...]
+    private: dict
+
+
+@dataclass(frozen=True, slots=True)
 class Relation:
     """A typed edge between two concepts. `provenance` is the document id
     that evidenced the relation."""

@@ -21,6 +21,7 @@ from lattice.core.types import (
     GraphDelta,
     GraphSnapshot,
     Relation,
+    ResolverState,
 )
 from lattice.graph_view import GraphView
 
@@ -234,17 +235,12 @@ class Engine:
         engine._orchestrator.graph_integrator.restore(
             GraphSnapshot(concepts=concepts, relations=relations)
         )
-        store = getattr(engine._orchestrator.resolver, "concept_store", None)
-        if store is not None:
-            for concept in concepts:
-                store.upsert(concept)
+        engine._orchestrator.resolver.restore(ResolverState(tuple(concepts), {}))
         engine._counter = int(payload["document_counter"])
         return engine
 
     def reset(self) -> None:
         """Empty the graph and restart the document counter."""
         self._orchestrator.graph_integrator.reset()
-        store = getattr(self._orchestrator.resolver, "concept_store", None)
-        if store is not None:
-            store.reset()
+        self._orchestrator.resolver.reset()
         self._counter = 0

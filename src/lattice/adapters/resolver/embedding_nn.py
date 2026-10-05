@@ -2,13 +2,14 @@ import uuid
 from collections.abc import Sequence
 from dataclasses import replace
 
+from lattice.adapters.resolver._store_backed import StoreBackedResolver
 from lattice.core.types import Concept, Document, Resolution, ScoredMention
 from lattice.ports import ConceptStore, Embedder, Resolver
 from lattice.registry.registry import register
 
 
 @register(Resolver, "embedding-nn")
-class EmbeddingNNResolver(Resolver):
+class EmbeddingNNResolver(StoreBackedResolver):
     """M3 resolver (spec §4.1): exact-label short-circuit, then embedding
     nearest-neighbour merge at `threshold` cosine similarity, else create a
     new concept. Concept embeddings are fixed at creation (no centroid
@@ -19,8 +20,7 @@ class EmbeddingNNResolver(Resolver):
     def __init__(
         self, embedder: Embedder, concept_store: ConceptStore, threshold: float = 0.8
     ):
-        self.embedder = embedder
-        self.concept_store = concept_store
+        super().__init__(embedder, concept_store)
         self.threshold = threshold
 
     def resolve(
@@ -33,14 +33,14 @@ class EmbeddingNNResolver(Resolver):
         vectors = dict(zip(unique, self.embedder.embed(unique)))
         resolutions: list[Resolution] = []
         for scored_mention, label in zip(scored_mentions, labels):
-            existing = self.concept_store.find_by_label(label)
+            existing = self._store.find_by_label(label)
             if existing is None:
-                hits = self.concept_store.nearest(vectors[label], k=1)
+                hits = self._store.nearest(vectors[label], k=1)
                 if hits and hits[0][1] >= self.threshold:
                     existing = hits[0][0]
             if existing is not None:
                 updated = replace(existing, updated_at=document.id)
-                self.concept_store.upsert(updated)
+                self._store.upsert(updated)
                 resolutions.append(
                     Resolution(concept=updated, mention=scored_mention, is_new=False)
                 )
@@ -52,7 +52,7 @@ class EmbeddingNNResolver(Resolver):
                     first_seen=document.id,
                     updated_at=document.id,
                 )
-                self.concept_store.upsert(concept)
+                self._store.upsert(concept)
                 resolutions.append(
                     Resolution(concept=concept, mention=scored_mention, is_new=True)
                 )

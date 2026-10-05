@@ -3,6 +3,8 @@ from lattice.core.vectors import cosine
 from lattice.ports import ConceptStore
 from lattice.registry.registry import register
 
+_ABSENT = object()  # sentinel: key didn't exist at checkpoint time
+
 
 @register(ConceptStore, "in-memory")
 class InMemoryConceptStore(ConceptStore):
@@ -12,9 +14,29 @@ class InMemoryConceptStore(ConceptStore):
     def __init__(self):
         self._by_id: dict[str, Concept] = {}
         self._id_by_label: dict[str, str] = {}
+        # Undo log (ADR-0002): None = no open checkpoint. Each dict maps a key to
+        # its value at checkpoint time, or _ABSENT; only first touch is recorded.
+        self._token: object | None = None
+        self._undo_by_id: dict[str, object] = {}
+        self._undo_by_label: dict[str, object] = {}
+
+    def _log(self, concept_id: str, labels: tuple[str, ...]) -> None:
+        if self._token is None:
+            return
+        if concept_id not in self._undo_by_id:
+            self._undo_by_id[concept_id] = self._by_id.get(concept_id, _ABSENT)
+        for label in labels:
+            if label not in self._undo_by_label:
+                self._undo_by_label[label] = self._id_by_label.get(label, _ABSENT)
+
+    def _undo_size(self) -> int:
+        return len(self._undo_by_id) + len(self._undo_by_label)
 
     def upsert(self, concept: Concept) -> None:
         old = self._by_id.get(concept.id)
+        # the old label gets popped below, so it has to be restorable too
+        labels = (concept.label,) if old is None else (old.label, concept.label)
+        self._log(concept.id, labels)
         if old is not None:
             self._id_by_label.pop(old.label, None)
         self._by_id[concept.id] = concept
@@ -43,11 +65,31 @@ class InMemoryConceptStore(ConceptStore):
     def reset(self) -> None:
         self._by_id.clear()
         self._id_by_label.clear()
+        self._close_log()
+
+    def _close_log(self) -> None:
+        self._token = None
+        self._undo_by_id = {}
+        self._undo_by_label = {}
 
     def checkpoint(self) -> object:
-        return (dict(self._by_id), dict(self._id_by_label))
+        # a fresh log implicitly commits whatever the previous one covered
+        self._close_log()
+        self._token = object()
+        return self._token
 
     def rollback(self, token: object) -> None:
-        by_id, id_by_label = token
-        self._by_id = dict(by_id)
-        self._id_by_label = dict(id_by_label)
+        if self._token is None or token is not self._token:
+            raise ValueError("stale or unknown checkpoint token (ADR-0002)")
+        # keys are independent per dict, so restore order doesn't matter
+        for label, prior in reversed(list(self._undo_by_label.items())):
+            if prior is _ABSENT:
+                self._id_by_label.pop(label, None)
+            else:
+                self._id_by_label[label] = prior
+        for concept_id, prior in reversed(list(self._undo_by_id.items())):
+            if prior is _ABSENT:
+                self._by_id.pop(concept_id, None)
+            else:
+                self._by_id[concept_id] = prior
+        self._close_log()

@@ -712,11 +712,18 @@ wheels = [
 
 [[package]]
 name = "lattice"
-version = "0.1.0"
+version = "0.2.0"
 source = { editable = "." }
 dependencies = [
     { name = "pydantic" },
     { name = "snowballstemmer" },
+]
+
+[package.optional-dependencies]
+ml = [
+    { name = "datasets" },
+    { name = "sentence-transformers" },
+    { name = "spacy" },
 ]
 
 [package.dev-dependencies]
@@ -732,9 +739,13 @@ ml = [
 
 [package.metadata]
 requires-dist = [
+    { name = "datasets", marker = "extra == 'ml'", specifier = ">=2.19" },
     { name = "pydantic", specifier = ">=2.7" },
+    { name = "sentence-transformers", marker = "extra == 'ml'", specifier = ">=3.0" },
     { name = "snowballstemmer", specifier = ">=2.2" },
+    { name = "spacy", marker = "extra == 'ml'", specifier = ">=3.7" },
 ]
+provides-extras = ["ml"]
 
 [package.metadata.requires-dev]
 dev = [

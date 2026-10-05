@@ -60,7 +60,8 @@ Key references: MDERank (arXiv 2110.06651), PromptRank (ACL 2023), HCUKE (Knowle
 
 A stable **core** — the domain model, typed contracts, and orchestration logic — depends only on
 **ports** (abstract interfaces). Every swappable thing is an **adapter** behind a port: each
-algorithm stage, the embedding model, the vector index, the graph store, *and* the benchmark
+algorithm stage, the embedding model, the vector index (`ConceptStore`), the graph store
+(`GraphIntegrator`), *and* the benchmark
 datasets and metrics. This is the only structure that satisfies all three constraints at once:
 swappability is the literal definition of adapters behind ports; streaming-native memory lives
 behind stateful ports the core treats identically; and SOLID falls out (each port SRP + ISP,
@@ -77,14 +78,16 @@ YAGNI).
                           │ depends only on ports ▼
    Segmenter → Extractor → Scorer → Resolver → RelationInducer → GraphIntegrator
                                        │                              │
-                                (ConceptStore)                  (graph state)
+                            (owns ConceptStore)                 (graph state)
                              shared: Embedder
    Harness ports:  Dataset ─▶ [fold process] ─▶ snapshot ─▶ Metric ─▶ report
 ```
 
 ### 4.1 Runtime model (streaming-paramount)
 
-The orchestrator's fundamental unit of work is `process(document, memory_state) → GraphDelta`.
+The orchestrator's fundamental unit of work is `process(document) → GraphDelta`; memory lives in
+the stateful ports (§4.2), never in a parameter. (*Amended 2026-10-04, ADR-0001: this line read
+`process(document, memory_state)`, contradicting §4.2 and the §4 rejection of a linear pipeline.*)
 **Batch is a fold over the stream** — "replay the whole stream at once." Batch has **no privileged
 code path**; this invariant is what keeps the streaming case first-class rather than bolted on.
 Only the first *implementations* of the stateful stores run batch-style; their ports are designed
@@ -92,11 +95,19 @@ streaming-native from day one.
 
 ### 4.2 Memory representation
 
-The stateful ports (`ConceptStore`, `GraphIntegrator`) **hold** the accreting state. `process()`
-mutates them through their interfaces and returns only the `GraphDelta`. Memory is **not** threaded
-as an immutable value (copying an ever-growing graph per document is unrealistic at streaming
-volume). Reproducibility is preserved by an explicit `snapshot()` contract on the stateful ports,
-plus `reset()` between experiment runs.
+The stateful ports (`Resolver`, which owns its `ConceptStore`, and `GraphIntegrator`) **hold** the
+accreting state. `process()` mutates them through their interfaces and returns only the
+`GraphDelta`. Memory is **not** threaded as an immutable value (copying an ever-growing graph per
+document is unrealistic at streaming volume). Every stateful port implements the same lifecycle:
+`checkpoint` / `rollback` (per-document atomicity, §8) and `snapshot` / `restore` (persistence),
+plus `reset()` between experiment runs. (*Amended 2026-10-04, ADR-0001 and ADR-0002: this
+section listed `ConceptStore` rather than `Resolver` as stateful, disagreeing with the §6 table,
+and named only `snapshot()`.*)
+
+> **Implementation pending (2026-10-04).** The code does not match this section yet: the
+> `Resolver` port has no lifecycle methods, `GraphIntegrator` has no `checkpoint`/`rollback`,
+> and the orchestrator and Engine still reach the store via `getattr(resolver, "concept_store")`.
+> See the follow-ups in ADR-0001 and ADR-0002. Remove this note when they land.
 
 ## 5. Domain contracts (`core/`)
 
@@ -125,8 +136,13 @@ Pure data types, zero external dependencies:
 | `RelationInducer` | `Concept`s + context → `Relation`s | no | Hearst patterns · compound head-modifier · co-occurrence |
 | `GraphIntegrator` | apply concepts + relations into accreting graph | **yes** | in-memory · (future) persistent |
 
-**Cross-cutting ports:** `Embedder` (embedding model, used by `Scorer` + `Resolver`),
-`ConceptStore` (vector index / memory backing the `Resolver`; in-memory default, pluggable).
+**Cross-cutting port:** `Embedder` (embedding model, used by `Scorer` + `Resolver`).
+
+**Owned port:** `ConceptStore` (vector index / memory; in-memory default, pluggable). The factory
+builds it and injects it into the `Resolver`, which **owns** it: the resolver's lifecycle methods
+cover the store, and no other component may touch it. (*Amended 2026-10-04, ADR-0001: previously
+listed as cross-cutting. A component that ever needs to read concept memory gets an explicit
+read-only query method on `Resolver`, not direct store access.*)
 
 **Harness ports:** `Dataset` (yields `Document`s + ground truth), `Metric` (scores a snapshot
 against ground truth).
@@ -151,8 +167,9 @@ against ground truth).
    [run]               on_error = "fail"   # D15
    ```
 
-3. **Factory** — validated config → registry lookup → instantiate with params → inject shared deps
-   (`Embedder`, `ConceptStore`) → wired orchestrator. This is the single DIP composition root and
+3. **Factory** — validated config → registry lookup → instantiate with params → inject deps
+   (the shared `Embedder`; the `ConceptStore` into its owning `Resolver`, per §6) → wired
+   orchestrator. This is the single DIP composition root and
    the only place concrete classes are named.
 
 **Reproducibility.** The fully resolved config — adapter names, params, model versions, and a seed —
@@ -160,14 +177,31 @@ is serialized and stamped onto every run's output. Re-running a config reproduce
 
 ## 8. Failure semantics
 
-The orchestrator takes an `on_error: fail | skip` policy from config (same code path either way):
-- **`fail`** (experiment default) — any adapter error aborts the run and surfaces the exception, so a
-  crash never silently shrinks the scored corpus.
-- **`skip`** (future production/streaming default) — the failing document is skipped and the stream
+**Every document is atomic.** At the start of each document, `process()` checkpoints every
+stateful port (§4.2). If any stage raises, it rolls them all back, so a failed document leaves no
+trace in the store, the resolver or the graph. Checkpoints are undo logs: their cost is
+proportional to what the document changed, not to the size of the memory.
+
+The orchestrator takes an `on_error: fail | skip` policy from config. After the rollback, the
+policy only decides where the error goes:
+- **`fail`** (default, experiments and the library alike) — the exception is re-raised, so a crash
+  never silently shrinks the scored corpus. The Engine stays usable if the caller catches it.
+- **`skip`** — `process()` returns a `GraphDelta` with the error recorded and the stream
   continues, so one poison document can't halt the memory.
 
-Regardless of policy, the error is **always** recorded in the `GraphDelta` and the run report —
-skips are never silent.
+Either way the error is in the run report, carried by the exception under `fail` and by the
+delta under `skip`, so skips are never silent. The policy covers every exception raised inside
+`process()`, from any stage. Errors outside it (`Dataset`, `Metric`, `DocumentMetric`) always
+abort the run.
+
+(*Amended 2026-10-04, ADR-0002: this section said the error is "always recorded in the
+`GraphDelta`", which cannot hold under `fail`; never said whether a skipped document has zero
+effect; and called `skip` the future production default, which M6 §2 superseded.*)
+
+> **Implementation pending (2026-10-04).** The code does not match this section yet: it
+> checkpoints only under `skip` and only the concept store, and the in-memory store's checkpoint
+> is a full copy, not an undo log. See the follow-ups in ADR-0002. Remove this note when they
+> land.
 
 ## 9. Experiment harness & evaluation
 

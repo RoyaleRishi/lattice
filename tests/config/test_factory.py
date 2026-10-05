@@ -37,7 +37,7 @@ def test_shared_dependencies_injected_by_parameter_name():
     config = make_run_config(embedder={"name": "hashing", "params": {"dim": 32}})
     orchestrator = build_orchestrator(config)
     assert orchestrator.resolver.embedder.dim == 32
-    assert orchestrator.resolver.concept_store is not None
+    assert orchestrator.resolver._store is not None
 
 
 def test_on_error_policy_flows_from_config():

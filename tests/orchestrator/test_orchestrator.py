@@ -145,12 +145,12 @@ def test_on_error_skip_rolls_back_concept_store_when_relation_inducer_fails():
         relation_inducer=ExplodingRelationInducer(), on_error="skip"
     )
     orchestrator.process(make_document(id="d0", text="vector store"))
-    store = orchestrator.resolver.concept_store
-    before = sorted(store.all(), key=lambda c: c.id)
+    resolver = orchestrator.resolver
+    before = resolver.snapshot().concepts
 
     delta = orchestrator.process(make_document(id="d1", text="new mention encoder"))
 
     assert len(delta.errors) == 1
-    assert sorted(store.all(), key=lambda c: c.id) == before
-    assert store.find_by_label("encoder") is None
-    assert store.find_by_label("mention") is None
+    assert resolver.snapshot().concepts == before
+    assert all(c.label != "encoder" for c in resolver.snapshot().concepts)
+    assert all(c.label != "mention" for c in resolver.snapshot().concepts)

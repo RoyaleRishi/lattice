@@ -26,10 +26,10 @@ test suite that never imports below the top level.
 |---|---|---|
 | Persistence in scope | Yes — `Engine.save`/`Engine.load`, versioned JSON | A memory engine that forgets on restart is unusable for NeuroNote. Still not a persistent *backend* (no DB; parent §14 deferral stands). User decision 2026-07-13. |
 | Default stack | `profile="lite"` (dependency-free) with a one-argument toggle to `profile="standard"` (benchmark-validated) | User decision 2026-07-13: dependency-free default, visible toggle. Both profiles share the same pipeline topology (embedding-NN resolver @ 0.90, hearst+compound union) and differ only in extractor and embedder — switching profiles changes quality, never behavior shape. |
-| Default error policy | `on_error="fail"` in both profiles | Least surprise for a library: exceptions propagate loudly. Consumers who want poison-document tolerance opt into `"skip"` via `from_config` (documented, including the partial-mutation caveat from the orchestrator docstring). |
+| Default error policy | `on_error="fail"` in both profiles | Least surprise for a library: exceptions propagate loudly. Consumers who want poison-document tolerance opt into `"skip"` via `from_config`. Under both policies a failed document is rolled back atomically, so the Engine stays consistent and usable (arch §8). (*Amended 2026-10-04, ADR-0002: this row cited a "partial-mutation caveat" that review-findings Task 3 made stale.*) |
 | Packaging of ml deps | Mirror the `ml` dependency group into `[project.optional-dependencies]` as the `ml` extra | Dependency groups are dev-only and do not ship; consumers need `lattice[ml]` installable. Mirror only — the pyproject dependency freeze (no NEW deps) is respected. |
 | Query surface | Thin `GraphView` wrapper, not methods on core types | Core dataclasses stay pure/dependency-free (parent §5); the view carries lazy indexes and can evolve without touching the domain model. |
-| Restore mechanism | New `GraphIntegrator.restore(snapshot)` port method; `ConceptStore` restores via existing `upsert` | Smallest port surface that makes load possible. The resolver keeps no private state (both resolvers lean on the store), so store + integrator restoration is complete. |
+| Restore mechanism | `GraphIntegrator.restore(snapshot)` and `Resolver.restore(...)`; the resolver restores the `ConceptStore` it owns | Load must reach every piece of state. The resolver is a stateful port that owns its store (arch §4.2, §6), so integrator + resolver restoration is complete. (*Amended 2026-10-04, ADR-0001: this row said "the resolver keeps no private state (both resolvers lean on the store)", which was false — `stemmed_label` holds `_concept_id_by_stem`. Resolver state needs a place in the save file, so the format moves to v2 (§4.3). `load` reads only v2; v1 files are converted by a one-off migration script (ADR-0003).*) |
 
 ## 3. Core/port changes
 
@@ -146,7 +146,7 @@ relation touching the id (direction readable from the relation itself),
 sorted by `(relation.type, other.id)` for determinism. Unknown concept_id →
 empty tuple (not an error: queries are reads, not assertions).
 
-### 4.3 Persistence format (v1)
+### 4.3 Persistence format (v1, superseded by v2 below)
 
 `Engine.save(path)` writes JSON:
 
@@ -170,6 +170,21 @@ store, restore the document counter, set `profile` from the file. A stored
 config naming unregistered adapters fails with the registry's normal error.
 Concept/relation field values round-trip exactly (JSON floats round-trip;
 tuples reconstructed).
+
+**v2 (amended 2026-10-04, ADR-0001 and ADR-0003).** v2 keeps every v1 field, sets
+`"format_version": 2`, and adds a `resolver_state` field. The resolver owns that field's shape:
+`save` writes whatever `Resolver.snapshot()` returns, and `load` hands it back to
+`Resolver.restore()` (which also restores the `ConceptStore` the resolver owns), instead of
+`upsert`-ing concepts into the store directly. `load` reads only v2, and any other version raises
+the `ValueError` above. v1 files are converted once by `scripts/migrate_save.py`. It builds a
+fresh Engine from the stored config, rebuilds resolver state from the saved concepts, and calls
+the normal v2 `save`, so it never hand-writes v2 JSON. For a resolver whose state can't be
+rebuilt from concepts, it raises instead of writing a file with missing state. Delete the script
+once no v1 files remain.
+
+> **Implementation pending (2026-10-04).** The code still writes and reads v1, and the migration
+> script does not exist yet. See the follow-ups in ADR-0001 to ADR-0003. Remove this note when
+> they land.
 
 **Resume-equivalence guarantee (the contract, test-enforced):**
 `ingest(A); ingest(B); save; load; ingest(C)` produces a snapshot equal

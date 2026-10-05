@@ -2,6 +2,9 @@
 (spec §1): the same surface in different documents must resolve to the SAME
 concept, with identity provenance preserved."""
 
+import pytest
+
+from lattice.core.types import ResolverState
 from lattice.ports import Resolver
 from tests.helpers import make_document, make_scored_mention
 
@@ -38,3 +41,93 @@ class ResolverContract:
 
     def test_empty_input_yields_no_resolutions(self):
         assert self.make_resolver().resolve([], make_document(id="d1")) == []
+
+    # --- lifecycle (ADR-0001 / ADR-0002) ---
+
+    def _feed(self, resolver, doc_id, surfaces):
+        mentions = [
+            make_scored_mention(surface=s, unit_id=f"{doc_id}:u{i}")
+            for i, s in enumerate(surfaces)
+        ]
+        return resolver.resolve(mentions, make_document(id=doc_id))
+
+    def test_rollback_restores_pre_checkpoint_snapshot(self):
+        resolver = self.make_resolver()
+        self._feed(resolver, "d1", ["vector store", "encoder"])
+        before = resolver.snapshot()
+        token = resolver.checkpoint()
+        # one existing surface (updated_at changes) + one brand-new surface
+        self._feed(resolver, "d2", ["vector store", "ranking model"])
+        assert resolver.snapshot() != before
+        resolver.rollback(token)
+        assert resolver.snapshot() == before
+
+    def test_snapshot_is_sorted_by_id(self):
+        resolver = self.make_resolver()
+        self._feed(resolver, "d1", ["zebra", "apple", "mango"])
+        ids = [c.id for c in resolver.snapshot().concepts]
+        assert ids == sorted(ids)
+
+    def test_snapshot_restore_round_trips_into_fresh_resolver(self):
+        original = self.make_resolver()
+        self._feed(original, "d1", ["vector store", "encoder"])
+        state = original.snapshot()
+        fresh = self.make_resolver()
+        fresh.restore(state)
+        assert fresh.snapshot() == state
+        # same next-document results as the original
+        a = self._feed(original, "d2", ["vector store", "new thing"])
+        b = self._feed(fresh, "d2", ["vector store", "new thing"])
+        assert a == b
+
+    def test_restore_with_empty_private_works(self):
+        original = self.make_resolver()
+        self._feed(original, "d1", ["vector store", "encoder"])
+        fresh = self.make_resolver()
+        fresh.restore(ResolverState(original.snapshot().concepts, {}))
+        assert fresh.snapshot().concepts == original.snapshot().concepts
+        a = self._feed(original, "d2", ["vector store", "new thing"])
+        b = self._feed(fresh, "d2", ["vector store", "new thing"])
+        assert a == b
+
+    def test_restore_replaces_existing_state(self):
+        resolver = self.make_resolver()
+        self._feed(resolver, "d1", ["leftover"])
+        resolver.restore(ResolverState((), {}))
+        assert resolver.snapshot().concepts == ()
+
+    def test_reset_empties_state(self):
+        resolver = self.make_resolver()
+        self._feed(resolver, "d1", ["vector store"])
+        resolver.reset()
+        assert resolver.snapshot() == ResolverState((), resolver.snapshot().private)
+        [r] = self._feed(resolver, "d2", ["vector store"])
+        assert r.is_new
+
+    def test_superseded_token_rollback_raises(self):
+        resolver = self.make_resolver()
+        stale = resolver.checkpoint()
+        resolver.checkpoint()
+        with pytest.raises(ValueError):
+            resolver.rollback(stale)
+
+    def test_double_rollback_raises(self):
+        resolver = self.make_resolver()
+        token = resolver.checkpoint()
+        resolver.rollback(token)
+        with pytest.raises(ValueError):
+            resolver.rollback(token)
+
+    def test_rollback_after_restore_raises(self):
+        resolver = self.make_resolver()
+        token = resolver.checkpoint()
+        resolver.restore(resolver.snapshot())
+        with pytest.raises(ValueError):
+            resolver.rollback(token)
+
+    def test_rollback_after_reset_raises(self):
+        resolver = self.make_resolver()
+        token = resolver.checkpoint()
+        resolver.reset()
+        with pytest.raises(ValueError):
+            resolver.rollback(token)

@@ -185,7 +185,13 @@ resolver = [
   naming the single-unit invariant and the fetch script.
 - Clustering metric: mention-key mismatch in either direction → hard error (never shrink).
 - Dataset: checksum mismatch aborts; missing files name the fetch script.
-- Everything else inherits the orchestrator `on_error` policy unchanged.
+- Scope: every exception raised inside `process()` follows the orchestrator `on_error` policy,
+  including the gold-mentions extractor's hard error above. Under `skip` that document is rolled
+  back and skipped, and the clustering metric's coverage check then fails the run, so the corpus
+  is still never silently shrunk. Dataset and metric errors are outside `process()` and always
+  abort. (*Amended 2026-10-04, ADR-0002: this line read "Everything else inherits the
+  orchestrator `on_error` policy unchanged", which left unclear whether the hard errors above
+  bypass the policy.*)
 
 ## 8. Testing strategy
 
