@@ -353,10 +353,13 @@ negative ones: `docs/results/`.
 
 ## Persistence
 
-`engine.save(path)` writes versioned JSON (`format_version: 1`) holding the
-fully resolved config, the graph, and the document counter. `Engine.load(path)`
+`engine.save(path)` writes versioned JSON (`format_version: 2`) holding the
+fully resolved config, the graph, the document counter, and the resolver's
+private state. `Engine.load(path)`
 rebuilds the engine and **resumes exactly**: processing A, B, save, load, C
-equals processing A, B, C in one run (test-enforced).
+equals processing A, B, C in one run (test-enforced). `load` reads only
+v2; convert an old v1 save once with
+`uv run python -m scripts.migrate_save old.json new.json`.
 
 ## API stability
 

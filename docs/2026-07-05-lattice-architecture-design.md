@@ -104,11 +104,6 @@ plus `reset()` between experiment runs. (*Amended 2026-10-04, ADR-0001 and ADR-0
 section listed `ConceptStore` rather than `Resolver` as stateful, disagreeing with the §6 table,
 and named only `snapshot()`.*)
 
-> **Implementation pending (2026-10-04).** The code does not match this section yet: the
-> `Resolver` port has no lifecycle methods, `GraphIntegrator` has no `checkpoint`/`rollback`,
-> and the orchestrator and Engine still reach the store via `getattr(resolver, "concept_store")`.
-> See the follow-ups in ADR-0001 and ADR-0002. Remove this note when they land.
-
 ## 5. Domain contracts (`core/`)
 
 Pure data types, zero external dependencies:
@@ -197,11 +192,6 @@ abort the run.
 (*Amended 2026-10-04, ADR-0002: this section said the error is "always recorded in the
 `GraphDelta`", which cannot hold under `fail`; never said whether a skipped document has zero
 effect; and called `skip` the future production default, which M6 §2 superseded.*)
-
-> **Implementation pending (2026-10-04).** The code does not match this section yet: it
-> checkpoints only under `skip` and only the concept store, and the in-memory store's checkpoint
-> is a full copy, not an undo log. See the follow-ups in ADR-0002. Remove this note when they
-> land.
 
 ## 9. Experiment harness & evaluation
 

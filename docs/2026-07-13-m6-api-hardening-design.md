@@ -182,10 +182,6 @@ the normal v2 `save`, so it never hand-writes v2 JSON. For a resolver whose stat
 rebuilt from concepts, it raises instead of writing a file with missing state. Delete the script
 once no v1 files remain.
 
-> **Implementation pending (2026-10-04).** The code still writes and reads v1, and the migration
-> script does not exist yet. See the follow-ups in ADR-0001 to ADR-0003. Remove this note when
-> they land.
-
 **Resume-equivalence guarantee (the contract, test-enforced):**
 `ingest(A); ingest(B); save; load; ingest(C)` produces a snapshot equal
 (`==` on the frozen dataclasses) to `ingest(A); ingest(B); ingest(C)` in

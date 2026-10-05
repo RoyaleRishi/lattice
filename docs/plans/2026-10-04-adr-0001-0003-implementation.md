@@ -18,7 +18,7 @@ If you want either recorded, I can add a short amendment to ADR-0001/0003.
 
 ## Chunks
 
-**Status:** C6a done · C1–C3 (753b2e9) · C4 + option B (0eea93a) · C5 (ce4129f) · C6 in progress · C7 not started.
+**Status:** C6a done · C1–C3 (753b2e9) · C4 + option B (0eea93a) · C5 (ce4129f) · C6 done (9130d68) · C7 done, awaiting commit. All chunks done.
 
 **C6a — v1 fixtures (done).** Generated from pre-change code: `tests/fixtures/saves/v1_lite_after_A_B.json` (`Engine()` + TEXT_A, TEXT_B from `tests/api/test_persistence.py`) and `v1_stemmed_after_STEM_A.json` (`_STEMMED_CONFIG` + STEM_A). Walking-skeleton baseline report saved to the session scratchpad as `baseline-walking-skeleton.json`.
 The chunks run in waves. Chunks within a wave are independent and can run in parallel. Each chunk is test-first: programmer → reviewer → you commit.

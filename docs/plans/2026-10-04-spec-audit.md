@@ -16,7 +16,7 @@ lines, so grep for the quoted text.
 
 | Theme | Status |
 |---|---|
-| T1 State + error policy | **Done (spec level).** ADR-0001..0003 accepted. Specs amended. Follow-up code not started. |
+| T1 State + error policy | **Done (spec level).** ADR-0001..0003 accepted. Specs amended. Follow-up code done (753b2e9, 0eea93a, ce4129f, 9130d68; C7 pending commit). |
 | T2 Selection bias in published comparisons | Not started |
 | T3 Interval method (§8 amendment not propagated) | Not started |
 | T4 Metric definitions / pass gates | Not started |
@@ -56,11 +56,12 @@ Spec sections amended:
 - M6 §2 (error-policy row and restore row), §4.3 (v2 paragraph)
 
 "Implementation pending" notes were added to arch §4.2, arch §8 and M6 §4.3. Remove them when
-the follow-up code lands.
+the follow-up code lands. (Removed in C7.)
 
 Findings closed: ARCH-1, 2, 3, 5, 6, 11 · M3-3 · M6-1, 2, 3.
 
-Follow-up code is listed in each ADR's Consequences:
+Follow-up code is listed in each ADR's Consequences. All done (commits 753b2e9, 0eea93a,
+ce4129f, 9130d68; C7 docs and cleanup pending commit):
 - resolver lifecycle
 - integrator `checkpoint/rollback`
 - undo logs (store + integrator)
@@ -191,9 +192,7 @@ Follow-up code is listed in each ADR's Consequences:
 
 - `Engine.save` writes with a plain `write_text` (`src/lattice/engine.py:~188`), so a crash mid-write can leave a partial save file. This predates ADR-0003; the C6 reviewer flagged it on 2026-10-04.
 - `tests/api/test_persistence.py` has no `ml`-marked tests, so save/load is never exercised on the `standard` profile (sentence-transformer embedder). Found by the C5 reviewer, 2026-10-04.
-- Finish themes T2–T6 (and unthemed) before planning the ADR-0001..0003 follow-up code. This
-  came up after T1 was amended into the specs. The follow-up code is listed in the ADRs'
-  Consequences (`decisions/0002-error-policy-and-per-document-atomicity.md`, "Follow-up code").
+- ~~Finish themes T2–T6 before planning the ADR-0001..0003 follow-up code.~~ Resolved 2026-10-04: the user chose to implement first. The code landed in 753b2e9, 0eea93a, ce4129f and 9130d68, plus C7.
 - Code-level risks from the first architecture pass, out of scope for a spec audit:
   - `relations_added` includes edges the graph already had (`orchestrator.py:99`).
   - A repeated edge overwrites the earlier one, losing its provenance and confidence
@@ -203,8 +202,8 @@ Follow-up code is listed in each ADR's Consequences:
 
 ## Next session starts with
 
-1. Read this file and `decisions/0001..0003`. The T1 spec edits are uncommitted, so check
-   whether the user has committed them.
+1. Read this file and `decisions/0001..0003`. T1 is fully done: specs amended and code implemented
+   (see `docs/plans/2026-10-04-adr-0001-0003-implementation.md`).
 2. Start **T2** (selection bias). STAT-5 and PR-1 are design decisions, so they go the ADR route:
    present options and trade-offs, and the user decides.
-3. Then T3 → T6 → unthemed, one theme at a time, before any follow-up code is planned.
+3. Then T3 → T6 → unthemed, one theme at a time.
