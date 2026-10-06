@@ -2,7 +2,7 @@
 
 **Date:** 2026-07-08
 **Status:** Approved design, pending spec review
-**Parent:** `docs/2026-07-05-lattice-architecture-design.md` (§13 Milestone 2, §14 open questions)
+**Parent:** `docs/architecture/2026-07-05-lattice-architecture-design.md` (§13 Milestone 2, §14 open questions)
 **Baseline:** M1 walking skeleton complete at `6bb7e10` (120 tests, e2e harness green)
 
 ---

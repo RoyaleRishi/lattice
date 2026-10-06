@@ -1,5 +1,7 @@
 # Spec audit (2026-10-04)
 
+> **Snapshot as of 2026-10-04. Not maintained; live tracking is in the Notion Inbox.**
+
 Logic audit of the nine design specs under `docs/`. Two checks only (user's choice):
 **internal consistency** and **spec vs spec**. No spec-vs-code comparison. 76 findings came from
 nine parallel `system-designer` agents, one per spec. The quotes for every high-severity finding

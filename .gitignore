@@ -14,5 +14,7 @@ reports/**
 docs/papers/
 .superpowers/
 
-# Claude Code hook logs
-.claude/logs/
+# AI working files (project-structure standard v2)
+.claude/
+CLAUDE.md
+CLAUDE.local.md

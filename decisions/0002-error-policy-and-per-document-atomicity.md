@@ -11,7 +11,7 @@ stateful port that owns its ConceptStore.
 
 ## Context and Problem Statement
 
-Arch spec §8 (`docs/2026-07-05-lattice-architecture-design.md` L160-170) defines
+Arch spec §8 (`docs/architecture/2026-07-05-lattice-architecture-design.md` L160-170) defines
 `on_error: fail | skip` but does not hold together. The 2026-10-04 spec audit (theme T1) found:
 
 - **"Always recorded" can't hold.** L168-169 says "Regardless of policy, the error is **always**

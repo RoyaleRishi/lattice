@@ -103,7 +103,7 @@ Unless stated otherwise, the numbers below are point estimates from the
 artifacts under `reports/`, regenerated 2026-08-01 at seed 0. Two exceptions,
 both marked where they appear: the 2016 TExEval-2 participant bands are
 transcribed from the task paper via
-`docs/2026-07-12-m4-hierarchy-design.md:299-305`, and the order-sensitivity
+`docs/architecture/2026-07-12-m4-hierarchy-design.md:299-305`, and the order-sensitivity
 subsection is a permutation study at **seed 1**. Provenance, before/after
 diffs and the full interval tables: `docs/results/2026-07-31-post-fix.md`.
 
@@ -180,7 +180,7 @@ Two further cautions. Earlier versions of this README quoted **0.962** and
 **0.643**. Those are maxima over the threshold grid — 0.9620 at threshold 0.80
 on ConEL-2, 0.6428 at 0.75 on ECB+ — not the shipped 0.90, and not the same
 threshold as each other. This project's own intervals spec names that exact
-comparison as selection bias (`docs/2026-07-14-statistical-intervals-design.md`
+comparison as selection bias (`docs/architecture/2026-07-14-statistical-intervals-design.md`
 §6) and requires the pre-registered operating point; the old README did not
 follow it. The shipped numbers are 0.9491 and 0.6255, and 0.9620 is in any
 case now below `stemmed-label`'s threshold-free 0.9637. Separately: the
@@ -204,7 +204,7 @@ cancels in the difference.
 of the published band on 2/6. The band column is the only thing on this page
 not from `reports/`: it is the participant range from the 2016 task paper's
 Table 3 (English F-score), transcribed at
-`docs/2026-07-12-m4-hierarchy-design.md:299-305`.
+`docs/architecture/2026-07-12-m4-hierarchy-design.md:299-305`.
 
 **The band comparison is not like-for-like, and both departures favour
 lattice:**
@@ -348,8 +348,9 @@ Stated so a reader can tell where the evidence stops.
   belongs behind the `[ml]` extra as a separate `ConceptStore` adapter.
 
 Specs and sweeps: `docs/` (start at
-`docs/2026-07-05-lattice-architecture-design.md`). Results, including the
-negative ones: `docs/results/`.
+`docs/architecture/2026-07-05-lattice-architecture-design.md`). Results, including the
+negative ones: `docs/results/`. Development setup, architecture conventions and
+results discipline: [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Persistence
 

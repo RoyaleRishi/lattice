@@ -2,7 +2,7 @@
 
 **Date:** 2026-07-11
 **Status:** Approved design, pending spec review
-**Parent:** `docs/2026-07-05-lattice-architecture-design.md` (§13 Milestone 3)
+**Parent:** `docs/architecture/2026-07-05-lattice-architecture-design.md` (§13 Milestone 3)
 **Baseline:** M2b complete at `4981cb2` (210 tests; scorers: frequency / embedding-cosine /
 mderank / hcuke; Inspec benchmark harness proven end-to-end)
 

@@ -1,7 +1,7 @@
 # lattice M5 — Integration Harness Design Spec
 
 **Date:** 2026-07-12
-**Parent:** `docs/2026-07-05-lattice-architecture-design.md` §9/§13 milestone 5
+**Parent:** `docs/architecture/2026-07-05-lattice-architecture-design.md` §9/§13 milestone 5
 **Status:** approved design, pre-plan
 
 Milestone 5: the bespoke **intrinsic** harness — redundancy rate, cluster
