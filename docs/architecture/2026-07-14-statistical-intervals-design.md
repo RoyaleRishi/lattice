@@ -1,7 +1,7 @@
 # lattice — Statistical Intervals Design Spec
 
 **Date:** 2026-07-14
-**Parent:** `docs/2026-07-05-lattice-architecture-design.md` (milestone list complete;
+**Parent:** `docs/architecture/2026-07-05-lattice-architecture-design.md` (milestone list complete;
 this is additive credibility hardening, not a parent-spec milestone)
 **Status:** approved design, pre-plan
 **Track:** 1 of 3 credibility-hardening sub-projects (this; then a second M5 corpus;

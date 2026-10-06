@@ -8,7 +8,7 @@ decision-makers: Rishi Srikaanth
 
 ## Context and Problem Statement
 
-The architecture spec (`docs/2026-07-05-lattice-architecture-design.md`) disagrees with itself
+The architecture spec (`docs/architecture/2026-07-05-lattice-architecture-design.md`) disagrees with itself
 about where pipeline state lives and who owns it. The 2026-10-04 spec audit (theme T1) found:
 
 - **Signature.** §4.1 L87 says `process(document, memory_state) → GraphDelta`. §4.2 L95-97 says

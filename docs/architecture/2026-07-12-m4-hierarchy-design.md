@@ -1,7 +1,7 @@
 # lattice M4 — Hierarchy Track Design Spec
 
 **Date:** 2026-07-12
-**Parent:** `docs/2026-07-05-lattice-architecture-design.md` §13 milestone 4
+**Parent:** `docs/architecture/2026-07-05-lattice-architecture-design.md` §13 milestone 4
 **Status:** approved design, pre-plan
 
 Milestone 4 of the parent spec: `RelationInducer` adapters (Hearst patterns,

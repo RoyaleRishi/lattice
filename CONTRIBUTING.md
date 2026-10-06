@@ -1,6 +1,4 @@
-# CLAUDE.md
-
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+# Contributing to lattice
 
 ## What this is
 
@@ -56,11 +54,16 @@ segmenter → extractor → scorer → (keep `selected` mentions) → resolver �
 ## Results discipline
 
 - `reports/**` is gitignored except `*.json` / `*.md`, because those back the README numbers. If you change an adapter or metric that a published number depends on, re-run the matching config/sweep and update the report and the README together. Don't hand-edit numbers.
-- Report the pre-registered operating point (e.g. resolver `embedding-nn @ 0.90`), not the best point on a threshold grid. See `docs/2026-07-14-statistical-intervals-design.md` §6.
+- Report the pre-registered operating point (e.g. resolver `embedding-nn @ 0.90`), not the best point on a threshold grid. See `docs/architecture/2026-07-14-statistical-intervals-design.md` §6.
 - Interval cells with `brackets_estimate: false` are size-sensitivity ranges, not confidence intervals.
 - When a config uses the `redundancy` metric, its `threshold` must be below the resolver's threshold, or it measures nothing (see the circularity note in `adapters/metric/redundancy.py` and the comments in `configs/m5-*.toml`).
 - The README's "What is not measured, and what is stale" section lists known-stale artifacts (PromptRank reports, three M5 holistic interval reports). Don't quote them.
 
 ## Docs layout
 
-Design specs are `docs/YYYY-MM-DD-<milestone>-design.md` (start with `docs/2026-07-05-lattice-architecture-design.md`). Implementation plans are in `docs/plans/`. Result write-ups, including negative results, are in `docs/results/`. Code comments cite spec sections (e.g. "spec §7.3"); keep that convention. Milestones: M2 extraction/salience, M3 normalization (identity), M4 hierarchy, M5 integration, M6 API hardening.
+- `docs/architecture/`: design specs, `YYYY-MM-DD-<milestone>-design.md` (start with `docs/architecture/2026-07-05-lattice-architecture-design.md`).
+- `docs/results/`: result write-ups, including negative results.
+- `docs/audits/`: dated review and audit snapshots. Not maintained after their date.
+- `decisions/`: architecture decision records (ADRs).
+
+Code comments cite spec sections (e.g. "spec §7.3"); keep that convention, and keep spec section numbers stable. Milestones: M2 extraction/salience, M3 normalization (identity), M4 hierarchy, M5 integration, M6 API hardening.

@@ -1,5 +1,7 @@
 # Implementation plan — 2026-07-31 code-review findings
 
+> **Snapshot as of 2026-07-31. Not maintained; live tracking is in the Notion Inbox.**
+
 **Branch:** `fix/review-findings`
 **Origin:** a full code-level review of lattice at `d9cfe93`. Every finding
 below was confirmed by executing code, not read off documentation.

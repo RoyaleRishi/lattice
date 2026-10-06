@@ -1,7 +1,7 @@
 # lattice M6 — Engine API Hardening Design Spec
 
 **Date:** 2026-07-13
-**Parent:** `docs/2026-07-05-lattice-architecture-design.md` §13 milestone 6
+**Parent:** `docs/architecture/2026-07-05-lattice-architecture-design.md` §13 milestone 6
 **Status:** approved design, pre-plan
 
 Milestone 6, the last in the parent spec: stabilize the public
@@ -200,7 +200,7 @@ choice and pointers to the M2–M5 specs and their headline results;
 persistence example (save/load three-liner); stability policy (pre-1.0:
 `__all__` is the contract, minor versions may break it with a changelog
 note, `format_version` guards saves); pointer to
-`docs/2026-07-05-lattice-architecture-design.md` for the architecture.
+`docs/architecture/2026-07-05-lattice-architecture-design.md` for the architecture.
 
 ## 6. Error handling
 

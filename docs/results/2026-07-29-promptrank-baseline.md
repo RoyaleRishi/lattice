@@ -38,7 +38,7 @@
 > verdict; do not adjust the numbers below to reach it.
 
 Track 3 deliverable. Adds **PromptRank** (Kong et al., ACL 2023) — the one
-keyphrase scorer M2 deliberately excluded ([m2 design §2](../2026-07-08-m2-extraction-salience-design.md))
+keyphrase scorer M2 deliberately excluded ([m2 design §2](../architecture/2026-07-08-m2-extraction-salience-design.md))
 — as a `promptrank` `Scorer` and runs it under identical M2b conditions on the
 Inspec test split (500 docs, `top_k=15`, seed 0). PromptRank is a **comparison
 entry only**; it is never wired into the shipped engine, so the "no generative
